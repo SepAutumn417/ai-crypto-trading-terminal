@@ -234,7 +234,7 @@ async def test_acceptance_config_activation_takes_effect(client):
             "max_leverage": "5",
             "min_risk_reward_ratio": "2",
             "preferred_risk_reward_ratio": "3",
-            "min_stop_distance_percent": "0.5",
+            "min_stop_distance_percent": "0.5",  # 0.5%（百分数基）
             "daily_loss_limit_r": "1",
             "max_consecutive_losses": 1,
             "cooldown_minutes_after_loss": 60,

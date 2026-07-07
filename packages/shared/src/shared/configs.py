@@ -5,6 +5,18 @@ from shared.enums import MarginMode, OrderType
 
 
 class RiskConfig(BaseModel):
+    """风控配置（配置版本载荷）。
+
+    ⚠️ 单位约定（v0.1.1）：
+    - max_risk_percent / min_stop_distance_percent：百分数基（整数百分数）
+        如 max_risk_percent=3 表示 3%；min_stop_distance_percent=0.3 表示 0.3%
+    - daily_loss_limit_r：R 倍数（2 = 2R）
+    - min_risk_reward_ratio / preferred_risk_reward_ratio：纯比率（如 1.5）
+
+    注意：calculator 算出的 sizing.stop_distance_percent 是小数（0.008 = 0.8%），
+    与 min_stop_distance_percent 不是同一单位。rules.py 比较时显式 * 100 换算。
+    """
+
     max_risk_percent: Decimal
     max_leverage: Decimal
     min_risk_reward_ratio: Decimal

@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, String, UniqueConstraint, func
+from sqlalchemy import Boolean, DateTime, Index, String, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -12,6 +12,14 @@ class ConfigVersionModel(Base):
     __tablename__ = "config_versions"
     __table_args__ = (
         UniqueConstraint("config_type", "version_label", name="uq_config_versions_type_label"),
+        # 部分唯一索引：每种 config_type 同时只能有一个 is_active=true
+        # 与 alembic migration 创建的 idx_config_versions_active 保持一致
+        Index(
+            "idx_config_versions_active",
+            "config_type",
+            unique=True,
+            postgresql_where=text("is_active = true"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)

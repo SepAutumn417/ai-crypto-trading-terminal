@@ -43,9 +43,15 @@ def check_hard_blocks(
     if plan.leverage > risk_cfg.max_leverage:
         reasons.append(f"leverage_excessive: {plan.leverage} > {risk_cfg.max_leverage}")
 
+    # 单位换算：sizing.stop_distance_percent 是小数（如 0.008 = 0.8%），
+    # min_stop_distance_percent 是百分数基（如 0.3 = 0.3%），
+    # 比较前乘 100 转为同一量级。
     stop_dist_pct = sizing.stop_distance_percent * Decimal("100")
     if plan.stop_loss_price is not None and stop_dist_pct < risk_cfg.min_stop_distance_percent:
-        reasons.append(f"stop_distance_too_small: {stop_dist_pct}% < {risk_cfg.min_stop_distance_percent}%")
+        reasons.append(
+            f"stop_distance_too_small: {stop_dist_pct}% "
+            f"< {risk_cfg.min_stop_distance_percent}%"
+        )
 
     if sizing.risk_reward_ratio < risk_cfg.min_risk_reward_ratio:
         reasons.append(f"risk_reward_too_low: {sizing.risk_reward_ratio} < {risk_cfg.min_risk_reward_ratio}")

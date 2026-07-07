@@ -13,7 +13,7 @@ SEED_RISK_V1 = {
     "max_leverage": Decimal("10"),
     "min_risk_reward_ratio": Decimal("1.5"),
     "preferred_risk_reward_ratio": Decimal("2.0"),
-    "min_stop_distance_percent": Decimal("0.3"),
+    "min_stop_distance_percent": Decimal("0.3"),  # 0.3%（百分数基）
     "daily_loss_limit_r": Decimal("2"),
     "max_consecutive_losses": 2,
     "cooldown_minutes_after_loss": 30,

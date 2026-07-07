@@ -11,13 +11,16 @@ from shared.schemas import PositionSizingResult, TradePlanInput
 from risk_engine.checker import check
 
 
-def _risk_config():
-    return RiskConfig(
+def _risk_config(**kw):
+    defaults = dict(
         max_risk_percent=Decimal("3"), max_leverage=Decimal("10"),
         min_risk_reward_ratio=Decimal("1.5"), preferred_risk_reward_ratio=Decimal("2.0"),
-        min_stop_distance_percent=Decimal("0.3"), daily_loss_limit_r=Decimal("2"),
+        min_stop_distance_percent=Decimal("0.3"),  # 0.3%（百分数基）
+        daily_loss_limit_r=Decimal("2"),
         max_consecutive_losses=2, cooldown_minutes_after_loss=30,
     )
+    defaults.update(kw)
+    return RiskConfig(**defaults)
 
 
 def _exec_config():
@@ -136,3 +139,26 @@ def test_excessive_risk_percent_blocks():
 def test_below_min_size_blocks():
     r = _run(sizing=_sizing(rounded_size=None, sizing_warnings=["below_min_size: ..."]))
     assert r.status == RiskStatus.BLOCK
+
+
+def test_min_stop_distance_unit_is_percent_basis():
+    """守恒测试：min_stop_distance_percent 是百分数基（如 0.3 表示 0.3%），与
+    sizing.stop_distance_percent 小数（0.008 = 0.8%）进行 *100 单位换算后比较。
+
+    修复前：代码用 stop_dist_pct=0.008 *100=0.8 与 min=0.3 比较 → 永远不会触发 block。
+    修复后：单位换算正确，止损距离 < 0.3% 应 BLOCK。
+    """
+    # 止损距离 0.05% < 0.3% → 应 BLOCK
+    r = _run(
+        plan=_plan(stop_loss_price=Decimal("62399.68")),
+        sizing=_sizing(stop_loss_price=Decimal("62399.68"), stop_distance_percent=Decimal("0.0005")),
+    )
+    assert r.status == RiskStatus.BLOCK
+    assert any("stop_distance_too_small" in x for x in r.block_reasons)
+
+
+def test_min_stop_distance_above_threshold_does_not_block():
+    """止损距离（0.8%）大于阈值（0.3%）时不应被 BLOCK。"""
+    # stop_distance_percent=0.008 = 0.8% > 0.3%
+    r = _run(sizing=_sizing(stop_distance_percent=Decimal("0.008")))
+    assert not any("stop_distance_too_small" in x for x in r.block_reasons)

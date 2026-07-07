@@ -85,3 +85,58 @@ async def test_activate_missing_config(client):
     body = resp.json()
     assert body["success"] is False
     assert body["error"]["code"] == "CONFIG_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_partial_unique_index_enforced(db_session):
+    """DB 层验证：每种 config_type 同时只能有一个 is_active=true。
+
+    直接绕过 API 写 DB，试图让两个同类型都为 is_active=True，
+    应被部分唯一索引 idx_config_versions_active 拒绝。
+    """
+    import uuid as _uuid
+    from datetime import datetime, timezone
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models import ConfigVersionModel as CVM
+    from app.db import Base
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+    # 用独立的 engine + session 避免 conflict with module-level TestSession
+    # （module-level session 可能复用连接导致 partial unique 索引无法浮现）
+    eng = create_async_engine(
+        "postgresql+asyncpg://crypto:crypto@localhost:5432/crypto_terminal_test",
+        echo=False, future=True,
+    )
+    Sess = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with Sess() as s:
+            a = CVM(
+                id=_uuid.uuid4(), config_type="risk", version_label="risk-unique-test-a",
+                payload={}, is_active=True,
+                created_at=datetime.now(timezone.utc), activated_at=datetime.now(timezone.utc),
+            )
+            s.add(a)
+            await s.commit()
+
+            b = CVM(
+                id=_uuid.uuid4(), config_type="risk", version_label="risk-unique-test-b",
+                payload={}, is_active=True,
+                created_at=datetime.now(timezone.utc), activated_at=datetime.now(timezone.utc),
+            )
+            s.add(b)
+            caught = False
+            try:
+                await s.commit()
+            except IntegrityError as exc:
+                assert "idx_config_versions_active" in str(exc) or "unique" in str(exc).lower()
+                caught = True
+            await s.rollback()
+            assert caught, "未触发 partial unique index idx_config_versions_active"
+    finally:
+        async with eng.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await eng.dispose()
