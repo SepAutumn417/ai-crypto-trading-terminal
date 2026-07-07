@@ -4,21 +4,51 @@ import { api, type CheckResult } from '@/lib/api';
 import { SizingCard } from './SizingCard';
 import { RiskCard } from './RiskCard';
 import { DecisionCard } from './DecisionCard';
+import { OrderConfirmModal } from './OrderConfirmModal';
 import { useState } from 'react';
 
 export function PlanDetail({ planId }: { planId: string }) {
   const qc = useQueryClient();
   const [result, setResult] = useState<CheckResult | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const { data: plan, isLoading } = useQuery({
     queryKey: ['plan', planId],
     queryFn: () => api.getPlan(planId),
   });
   const checkMut = useMutation({
     mutationFn: () => api.checkPlan(planId),
-    onSuccess: (r) => { setResult(r); qc.invalidateQueries({ queryKey: ['plan', planId] }); qc.invalidateQueries({ queryKey: ['plans'] }); },
+    onSuccess: (r) => {
+      setResult(r);
+      qc.invalidateQueries({ queryKey: ['plan', planId] });
+      qc.invalidateQueries({ queryKey: ['plans'] });
+    },
   });
 
+  const executeMut = useMutation({
+    mutationFn: async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return { success: true };
+    },
+    onSuccess: () => {
+      setShowConfirm(false);
+      qc.invalidateQueries({ queryKey: ['plan', planId] });
+      qc.invalidateQueries({ queryKey: ['plans'] });
+    },
+  });
+
+  const handleExecute = () => {
+    if (result) {
+      setShowConfirm(true);
+    }
+  };
+
+  const handleConfirm = () => {
+    executeMut.mutate();
+  };
+
   if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
+
+  const canExecute = result?.decision.result === 'ALLOW_CONFIRM';
 
   return (
     <div className="space-y-4">
@@ -32,10 +62,25 @@ export function PlanDetail({ planId }: { planId: string }) {
           <div>等级: {plan.opportunity_grade}</div>
           <div>状态: <span className="font-bold">{plan.status}</span></div>
         </div>
-        <button onClick={() => checkMut.mutate()} disabled={checkMut.isPending}
-          className="mt-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 px-4 py-2 rounded">
-          {checkMut.isPending ? '检查中...' : '运行检查'}
-        </button>
+        <div className="mt-4 flex gap-3">
+          <button onClick={() => checkMut.mutate()} disabled={checkMut.isPending}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-700 px-4 py-2 rounded">
+            {checkMut.isPending ? '检查中...' : '运行检查'}
+          </button>
+          {result && (
+            <button
+              onClick={handleExecute}
+              disabled={!canExecute || executeMut.isPending}
+              className={`px-4 py-2 rounded ${
+                canExecute
+                  ? 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {executeMut.isPending ? '执行中...' : '执行交易'}
+            </button>
+          )}
+        </div>
       </div>
       {result && (
         <div className="space-y-3">
@@ -44,6 +89,14 @@ export function PlanDetail({ planId }: { planId: string }) {
           <DecisionCard decision={result.decision} />
         </div>
       )}
+
+      <OrderConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirm}
+        result={result}
+        isSubmitting={executeMut.isPending}
+      />
     </div>
   );
 }
