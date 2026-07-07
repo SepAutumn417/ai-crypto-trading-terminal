@@ -139,6 +139,42 @@ export interface CheckResult {
   decision: DecisionGateResult;
 }
 
+export interface Ticker {
+  symbol: string;
+  last_price: string;
+  mark_price: string | null;
+  index_price: string | null;
+  high_24h: string | null;
+  low_24h: string | null;
+  volume_24h: string | null;
+  change_percent_24h: string | null;
+  timestamp: string | null;
+}
+
+export interface Kline {
+  timestamp: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: string;
+  quote_volume: string | null;
+}
+
+export interface OrderbookLevel {
+  price: string;
+  quantity: string;
+}
+
+export interface Orderbook {
+  symbol: string;
+  bids: OrderbookLevel[];
+  asks: OrderbookLevel[];
+  timestamp: string | null;
+}
+
+export type KlineInterval = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '6h' | '12h' | '1d' | '1w';
+
 export const api = {
   getSystemStatus: () => request<SystemStatus>('/api/system/status'),
   toggleKillSwitch: (enabled: boolean) =>
@@ -169,4 +205,10 @@ export const api = {
   getPlan: (id: string) => request<TradePlan>(`/api/trade-plans/${id}`),
   calculatePosition: (input: any) =>
     request<any>('/api/risk/calculate-position', { method: 'POST', body: JSON.stringify(input) }),
+  getTicker: (symbol: string) =>
+    request<Ticker>(`/api/market/ticker?symbol=${encodeURIComponent(symbol)}`),
+  getKlines: (symbol: string, interval: KlineInterval = '1h', limit: number = 100) =>
+    request<Kline[]>(`/api/market/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`),
+  getOrderbook: (symbol: string, limit: number = 20) =>
+    request<Orderbook>(`/api/market/orderbook?symbol=${encodeURIComponent(symbol)}&limit=${limit}`),
 };
