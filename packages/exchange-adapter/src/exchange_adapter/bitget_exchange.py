@@ -1,6 +1,10 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, TYPE_CHECKING
+import hmac
+import hashlib
+import base64
+import json
 
 from .base import Exchange
 from .types import (
@@ -71,10 +75,52 @@ class BitgetExchange(Exchange):
             await self._session.close()
             self._session = None
 
-    async def _request(self, method: str, path: str, params: Optional[dict] = None, body: Optional[dict] = None) -> dict:
-        session = await self._get_session()
+    async def _sign(self, timestamp: str, method: str, path: str, body: Optional[str] = None) -> str:
+        if not self.api_secret:
+            raise ValueError("API secret is required for private endpoints")
+        message = f"{timestamp}{method.upper()}{path}{body or ''}"
+        signature = hmac.new(
+            self.api_secret.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+        return base64.b64encode(signature).decode('utf-8')
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        params: Optional[dict] = None,
+        body: Optional[dict] = None,
+        is_private: bool = False,
+    ) -> dict:
         url = f"{self.base_url}{path}"
-        async with session.request(method, url, params=params, json=body) as resp:
+
+        headers = {"Content-Type": "application/json"}
+
+        if is_private:
+            if not self.api_key or not self.passphrase:
+                raise ValueError("API key and passphrase are required for private endpoints")
+
+            timestamp = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+            body_str = json.dumps(body, separators=(',', ':')) if body else ""
+            query_string = ""
+            if params:
+                query_string = "?" + "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+
+            sign_path = path + query_string
+            signature = await self._sign(timestamp, method, sign_path, body_str if body else None)
+
+            headers.update({
+                "ACCESS-KEY": self.api_key,
+                "ACCESS-SIGN": signature,
+                "ACCESS-TIMESTAMP": timestamp,
+                "ACCESS-PASSPHRASE": self.passphrase,
+                "locale": "en-US",
+            })
+
+        session = await self._get_session()
+        async with session.request(method, url, params=params, json=body, headers=headers) as resp:
             data = await resp.json()
             if data.get("code") != "00000":
                 raise ValueError(f"Bitget API error: {data.get('msg', data)}")
@@ -144,10 +190,53 @@ class BitgetExchange(Exchange):
         )
 
     async def get_balances(self) -> list[Balance]:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        data = await self._request(
+            "GET", "/api/v2/mix/account/accounts",
+            params={"productType": "usdt-futures"},
+            is_private=True,
+        )
+        balances: list[Balance] = []
+        if isinstance(data, list):
+            for item in data:
+                balances.append(Balance(
+                    asset=item.get("marginCoin", "USDT"),
+                    available=Decimal(str(item.get("available", "0"))),
+                    total=Decimal(str(item.get("equity", "0"))),
+                    unrealized_pnl=Decimal(str(item.get("unrealizedPL", "0"))) if item.get("unrealizedPL") else None,
+                    margin_balance=Decimal(str(item.get("marginBalance", "0"))) if item.get("marginBalance") else None,
+                    equity=Decimal(str(item.get("equity", "0"))) if item.get("equity") else None,
+                ))
+        return balances
 
     async def get_positions(self, symbol: Optional[str] = None) -> list[Position]:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        params = {"productType": "usdt-futures"}
+        if symbol:
+            params["symbol"] = symbol
+        data = await self._request(
+            "GET", "/api/v2/mix/position/all-position",
+            params=params,
+            is_private=True,
+        )
+        positions: list[Position] = []
+        if isinstance(data, list):
+            for item in data:
+                hold_side = item.get("holdSide", "")
+                side = PositionSide.LONG if hold_side == "long" else PositionSide.SHORT
+                positions.append(Position(
+                    symbol=item.get("symbol", ""),
+                    side=side,
+                    quantity=Decimal(str(item.get("total", "0"))),
+                    entry_price=Decimal(str(item.get("averageOpenPrice", "0"))),
+                    mark_price=Decimal(str(item.get("markPrice", "0"))) if item.get("markPrice") else None,
+                    unrealized_pnl=Decimal(str(item.get("unrealizedPL", "0"))) if item.get("unrealizedPL") else None,
+                    unrealized_pnl_percent=Decimal(str(item.get("unrealizedPLR", "0"))) if item.get("unrealizedPLR") else None,
+                    leverage=Decimal(str(item.get("leverage", "1"))),
+                    margin_type=item.get("marginMode", "isolated"),
+                    liquidation_price=Decimal(str(item.get("liquidationPrice", "0"))) if item.get("liquidationPrice") else None,
+                    margin=Decimal(str(item.get("margin", "0"))) if item.get("margin") else None,
+                    updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=timezone.utc) if item.get("uTime") else None,
+                ))
+        return positions
 
     async def get_orders(
         self,
@@ -155,10 +244,68 @@ class BitgetExchange(Exchange):
         status: Optional[OrderStatus] = None,
         limit: int = 50,
     ) -> list[Order]:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        if status == OrderStatus.FILLED:
+            endpoint = "/api/v2/mix/order/history-orders"
+        elif status in (OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED):
+            endpoint = "/api/v2/mix/order/current"
+        else:
+            endpoint = "/api/v2/mix/order/history-orders"
+
+        params = {
+            "symbol": symbol,
+            "productType": "usdt-futures",
+            "pageSize": str(limit),
+        }
+        data = await self._request("GET", endpoint, params=params, is_private=True)
+
+        order_list = data.get("orderList", []) if isinstance(data, dict) else []
+        orders: list[Order] = []
+        for item in order_list:
+            orders.append(self._parse_order(item))
+        return orders
 
     async def get_order(self, symbol: str, order_id: str) -> Order:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        data = await self._request(
+            "GET", "/api/v2/mix/order/detail",
+            params={"symbol": symbol, "orderId": order_id, "productType": "usdt-futures"},
+            is_private=True,
+        )
+        return self._parse_order(data)
+
+    def _parse_order(self, item: dict) -> Order:
+        state = item.get("state", "")
+        status_map = {
+            "filled": OrderStatus.FILLED,
+            "live": OrderStatus.NEW,
+            "partially_filled": OrderStatus.PARTIALLY_FILLED,
+            "canceled": OrderStatus.CANCELED,
+            "rejected": OrderStatus.REJECTED,
+        }
+        status = status_map.get(state, OrderStatus.NEW)
+
+        side = OrderSide.BUY if item.get("side", "") == "buy" else OrderSide.SELL
+        order_type_map = {
+            "limit": OrderType.LIMIT,
+            "market": OrderType.MARKET,
+            "stop": OrderType.STOP,
+        }
+        order_type = order_type_map.get(item.get("orderType", "limit"), OrderType.LIMIT)
+
+        return Order(
+            id=item.get("orderId", ""),
+            symbol=item.get("symbol", ""),
+            side=side,
+            type=order_type,
+            status=status,
+            price=Decimal(str(item.get("price", "0"))) if item.get("price") else None,
+            quantity=Decimal(str(item.get("size", "0"))),
+            filled_quantity=Decimal(str(item.get("baseVolume", "0"))) if item.get("baseVolume") else Decimal("0"),
+            average_fill_price=Decimal(str(item.get("priceAvg", "0"))) if item.get("priceAvg") else None,
+            stop_price=Decimal(str(item.get("stopPrice", "0"))) if item.get("stopPrice") else None,
+            client_order_id=item.get("clientOid") or None,
+            created_at=datetime.fromtimestamp(int(item.get("cTime", "0")) / 1000, tz=timezone.utc) if item.get("cTime") else None,
+            updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=timezone.utc) if item.get("uTime") else None,
+        )
 
     async def place_order(
         self,
@@ -172,16 +319,119 @@ class BitgetExchange(Exchange):
         stop_loss_price: Optional[Decimal] = None,
         client_order_id: Optional[str] = None,
     ) -> Order:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        body: dict = {
+            "symbol": symbol,
+            "productType": "usdt-futures",
+            "side": side.value,
+            "orderType": order_type.value,
+            "size": str(quantity),
+        }
+
+        if price is not None:
+            body["price"] = str(price)
+
+        if client_order_id:
+            body["clientOid"] = client_order_id
+
+        if stop_price is not None:
+            body["stopPrice"] = str(stop_price)
+
+        preset_take_stop = {}
+        if take_profit_price is not None:
+            preset_take_stop["takeProfitPrice"] = str(take_profit_price)
+        if stop_loss_price is not None:
+            preset_take_stop["stopLossPrice"] = str(stop_loss_price)
+        if preset_take_stop:
+            body["presetTakeProfitStopLoss"] = preset_take_stop
+
+        data = await self._request(
+            "POST", "/api/v2/mix/order/place-order",
+            body=body,
+            is_private=True,
+        )
+
+        order_id = data.get("orderId") or client_order_id or ""
+        if order_id:
+            try:
+                return await self.get_order(symbol, order_id)
+            except Exception:
+                pass
+
+        return Order(
+            id=order_id,
+            symbol=symbol,
+            side=side,
+            type=order_type,
+            status=OrderStatus.NEW,
+            price=price,
+            quantity=quantity,
+            client_order_id=client_order_id,
+        )
 
     async def cancel_order(self, symbol: str, order_id: str) -> Order:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        body = {
+            "symbol": symbol,
+            "orderId": order_id,
+            "productType": "usdt-futures",
+        }
+        data = await self._request(
+            "POST", "/api/v2/mix/order/cancel-order",
+            body=body,
+            is_private=True,
+        )
+        return Order(
+            id=data.get("orderId", order_id),
+            symbol=symbol,
+            side=OrderSide.BUY,
+            type=OrderType.LIMIT,
+            status=OrderStatus.CANCELED,
+            quantity=Decimal("0"),
+        )
 
     async def cancel_all_orders(self, symbol: str) -> list[Order]:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        body = {
+            "symbol": symbol,
+            "productType": "usdt-futures",
+        }
+        data = await self._request(
+            "POST", "/api/v2/mix/order/cancel-all",
+            body=body,
+            is_private=True,
+        )
+        canceled_ids = data.get("orderIds", []) if isinstance(data, dict) else []
+        return [
+            Order(
+                id=oid,
+                symbol=symbol,
+                side=OrderSide.BUY,
+                type=OrderType.LIMIT,
+                status=OrderStatus.CANCELED,
+                quantity=Decimal("0"),
+            )
+            for oid in canceled_ids
+        ]
 
     async def set_leverage(self, symbol: str, leverage: int) -> None:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        body = {
+            "symbol": symbol,
+            "productType": "usdt-futures",
+            "leverage": str(leverage),
+            "marginCoin": "USDT",
+        }
+        await self._request(
+            "POST", "/api/v2/mix/account/set-leverage",
+            body=body,
+            is_private=True,
+        )
 
     async def set_margin_mode(self, symbol: str, margin_mode: str) -> None:
-        raise NotImplementedError("Bitget private API requires API key authentication")
+        body = {
+            "symbol": symbol,
+            "productType": "usdt-futures",
+            "marginMode": margin_mode,
+        }
+        await self._request(
+            "POST", "/api/v2/mix/account/set-margin-mode",
+            body=body,
+            is_private=True,
+        )
