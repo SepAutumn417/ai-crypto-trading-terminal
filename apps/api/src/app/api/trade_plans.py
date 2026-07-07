@@ -9,7 +9,7 @@ from app.response import ApiResponse
 from app.schemas.trade_plan import (
     CheckResult, TradePlanCreate, TradePlanOut,
 )
-from app.services import plan_service
+from app.services import plan_service, execution_service
 from shared.schemas import TradePlanInput
 
 
@@ -41,6 +41,24 @@ async def check_plan(plan_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
         "decision": result["decision"],
     }
     return ApiResponse.ok(payload).model_dump()
+
+
+@router.post("/{plan_id}/execute")
+async def execute_plan(plan_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
+    plan = await execution_service.execute_plan(db, plan_id)
+    return ApiResponse.ok(plan.model_dump(mode="json")).model_dump()
+
+
+@router.post("/{plan_id}/sync")
+async def sync_order_status(plan_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
+    plan = await execution_service.sync_order_status(db, plan_id)
+    return ApiResponse.ok(plan.model_dump(mode="json")).model_dump()
+
+
+@router.post("/{plan_id}/cancel")
+async def cancel_plan_order(plan_id: UUID, db: AsyncSession = Depends(get_db)) -> dict:
+    plan = await execution_service.cancel_plan_order(db, plan_id)
+    return ApiResponse.ok(plan.model_dump(mode="json")).model_dump()
 
 
 @router.get("")

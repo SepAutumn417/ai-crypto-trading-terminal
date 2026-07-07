@@ -163,6 +163,11 @@ def _to_schema(m: TradePlanModel) -> TradePlanSchema:
         status=PlanStatus(m.status), risk_config_version=m.risk_config_version,
         strategy_config_version=m.strategy_config_version,
         user_trading_config_version=m.user_trading_config_version,
+        exchange_order_id=m.exchange_order_id,
+        client_order_id=m.client_order_id,
+        filled_quantity=m.filled_quantity,
+        average_fill_price=m.average_fill_price,
+        execution_error=m.execution_error,
         created_at=m.created_at, updated_at=m.updated_at,
     )
 

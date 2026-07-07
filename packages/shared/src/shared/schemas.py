@@ -44,6 +44,11 @@ class TradePlan(BaseModel):
     risk_config_version: str | None = None
     strategy_config_version: str | None = None
     user_trading_config_version: str | None = None
+    exchange_order_id: str | None = None
+    client_order_id: str | None = None
+    filled_quantity: Decimal | None = None
+    average_fill_price: Decimal | None = None
+    execution_error: str | None = None
     created_at: datetime
     updated_at: datetime
 
