@@ -14,6 +14,9 @@ const schema = z.object({
   risk_percent: z.string(),
   opportunity_grade: z.enum(['A', 'B', 'C', 'BLOCKED']),
   equity: z.string(),
+  margin_mode: z.enum(['isolated', 'crossed']),
+  setup_type: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) => void; submitting: boolean }) {
@@ -23,6 +26,7 @@ export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) =
       symbol: 'BTCUSDT', direction: 'LONG', entry_price: '62400', stop_loss_price: '61900',
       take_profit_prices: '63800,64500', leverage: '10', risk_percent: '1',
       opportunity_grade: 'A', equity: '1500',
+      margin_mode: 'isolated', setup_type: '', notes: '',
     },
   });
 
@@ -37,6 +41,9 @@ export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) =
       risk_percent: data.risk_percent,
       opportunity_grade: data.opportunity_grade as 'A' | 'B' | 'C' | 'BLOCKED',
       equity: data.equity,
+      margin_mode: data.margin_mode,
+      setup_type: data.setup_type || undefined,
+      notes: data.notes || undefined,
     }))}
       className="space-y-2 p-4 border border-gray-800 rounded">
       <div className="grid grid-cols-2 gap-2">
@@ -70,8 +77,20 @@ export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) =
             <option value="C">C</option><option value="BLOCKED">BLOCKED</option>
           </select>
         </label>
+        <label className="text-sm">保证金模式
+          <select {...register('margin_mode')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
+            <option value="isolated">逐仓</option>
+            <option value="crossed">全仓</option>
+          </select>
+        </label>
         <label className="text-sm">账户权益
           <input {...register('equity')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+        </label>
+        <label className="text-sm">形态类型
+          <input {...register('setup_type')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+        </label>
+        <label className="text-sm col-span-2">备注
+          <textarea {...register('notes')} rows={2} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded resize-none" />
         </label>
       </div>
       <button type="submit" disabled={submitting}

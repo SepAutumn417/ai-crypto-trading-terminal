@@ -2,7 +2,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { RiskConfigCard } from '@/components/risk/RiskConfigCard';
-import { AccountRiskStateCard } from '@/components/risk/AccountRiskStateCard';
 import { KillSwitchToggle } from '@/components/risk/KillSwitchToggle';
 import { ConfigVersionManager } from '@/components/risk/ConfigVersionManager';
 
@@ -22,7 +21,6 @@ export default function RiskPage() {
       <h1 className="text-2xl font-bold">风控中心</h1>
       <KillSwitchToggle enabled={status?.kill_switch ?? true} executionEnabled={status?.execution_enabled ?? false} />
       <RiskConfigCard configs={activeConfigs?.risk} />
-      <AccountRiskStateCard />
       <ConfigVersionManager />
     </div>
   );

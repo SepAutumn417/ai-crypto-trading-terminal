@@ -90,11 +90,53 @@ export interface PlanCreate {
   notes?: string | null;
 }
 
+export interface PositionSizingResult {
+  id: string | null;
+  trade_plan_id: string | null;
+  equity: string;
+  risk_percent: string;
+  risk_amount: string;
+  entry_price: string;
+  stop_loss_price: string | null;
+  stop_distance_percent: string;
+  notional_value: string;
+  raw_size: string;
+  rounded_size: string | null;
+  required_margin: string;
+  leverage: string;
+  estimated_fee: string;
+  risk_reward_ratio: string;
+  estimated_loss_at_stop: string;
+  sizing_warnings: string[];
+}
+
+export interface RiskCheckResult {
+  id: string | null;
+  trade_plan_id: string | null;
+  status: string;
+  risk_amount: string;
+  notional_value: string;
+  required_margin: string;
+  risk_reward_ratio: string;
+  max_allowed_risk_percent: string;
+  warnings: string[];
+  block_reasons: string[];
+  risk_config_version: string | null;
+}
+
+export interface DecisionGateResult {
+  id: string | null;
+  trade_plan_id: string | null;
+  risk_check_id: string | null;
+  result: string;
+  reasons: string[];
+}
+
 export interface CheckResult {
   plan: TradePlan;
-  sizing: any;
-  risk: any;
-  decision: any;
+  sizing: PositionSizingResult;
+  risk: RiskCheckResult;
+  decision: DecisionGateResult;
 }
 
 export const api = {
