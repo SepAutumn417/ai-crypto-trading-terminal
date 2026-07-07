@@ -1,4 +1,5 @@
 from .base import Exchange
+from .bitget_exchange import BitgetExchange
 from .mock_exchange import MockExchange
 from .types import (
     Balance,
@@ -17,6 +18,7 @@ from .types import (
 
 __all__ = [
     "Exchange",
+    "BitgetExchange",
     "MockExchange",
     "Balance",
     "Kline",
