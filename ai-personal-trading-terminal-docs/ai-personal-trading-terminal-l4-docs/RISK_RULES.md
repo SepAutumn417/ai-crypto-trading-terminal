@@ -44,6 +44,15 @@ requiredMargin = notionalValue / leverage
 riskRewardRatio = takeProfitDistance / stopDistance
 ```
 
+### 单位约定
+
+| 字段 | 单位 | 示例 | 说明 |
+|---|---|---|---|
+| `riskPercent` | 百分数基 | `1` = 1% | 配置中 `max_risk_percent`、`risk_percent` 均为百分数基 |
+| `stopDistancePercent` | 小数 | `0.008` = 0.8% | 计算结果为小数，比较时需乘 100 转为百分数基 |
+| `min_stop_distance_percent` | 百分数基 | `0.3` = 0.3% | 配置项使用百分数基，与 `riskPercent` 一致 |
+| `max_notional_equity_ratio` | 倍数 | `20` = 20倍 | 名义价值 / 账户权益的上限倍数 |
+
 ---
 
 ## 4. 风控结果
@@ -71,7 +80,7 @@ riskRewardRatio = takeProfitDistance / stopDistance
 1. 无止损；
 2. 风险金额超过配置上限；
 3. 杠杆超过配置上限；
-4. 止损距离小于最小阈值；
+4. 止损距离小于最小阈值（百分数基，如 0.3 = 0.3%）；
 5. 盈亏比低于最低阈值；
 6. 当日亏损达到限制；
 7. 连续亏损达到限制；
@@ -80,7 +89,8 @@ riskRewardRatio = takeProfitDistance / stopDistance
 10. WebSocket/交易所状态异常；
 11. 数据库无法写入；
 12. 机会等级为禁止；
-13. 订单未通过用户确认。
+13. 订单未通过用户确认；
+14. 名义价值 / 账户权益 超过上限（如 20 倍）。
 
 ---
 

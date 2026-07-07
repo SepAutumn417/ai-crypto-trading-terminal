@@ -17,13 +17,15 @@
 
 ```yaml
 risk:
+  max_risk_percent: 3
   max_leverage: 10
   min_risk_reward_ratio: 1.5
   preferred_risk_reward_ratio: 2.0
-  min_stop_distance_percent: 0.3
+  min_stop_distance_percent: 0.3    # 百分数基，0.3 = 0.3%
   daily_loss_limit_r: 2
   max_consecutive_losses: 2
   cooldown_minutes_after_loss: 30
+  max_notional_equity_ratio: 20     # 名义价值/权益上限倍数
 ```
 
 ---
