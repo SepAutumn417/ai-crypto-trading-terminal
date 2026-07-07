@@ -175,6 +175,62 @@ export interface Orderbook {
 
 export type KlineInterval = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '6h' | '12h' | '1d' | '1w';
 
+export interface TradeJournal {
+  id: string;
+  trade_plan_id: string | null;
+  exchange: string;
+  symbol: string;
+  direction: 'LONG' | 'SHORT';
+  entry_price: string;
+  exit_price: string | null;
+  quantity: string;
+  leverage: string;
+  pnl: string | null;
+  pnl_percent: string | null;
+  setup_type: string | null;
+  entry_reason: string | null;
+  exit_reason: string | null;
+  lessons_learned: string | null;
+  emotions: string | null;
+  status: 'OPEN' | 'CLOSED';
+  entry_at: string | null;
+  exit_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TradeJournalCreate {
+  trade_plan_id?: string | null;
+  exchange?: string;
+  symbol: string;
+  direction: 'LONG' | 'SHORT';
+  entry_price: string;
+  exit_price?: string | null;
+  quantity: string;
+  leverage?: string;
+  pnl?: string | null;
+  pnl_percent?: string | null;
+  setup_type?: string | null;
+  entry_reason?: string | null;
+  exit_reason?: string | null;
+  lessons_learned?: string | null;
+  emotions?: string | null;
+  status?: 'OPEN' | 'CLOSED';
+  entry_at?: string | null;
+  exit_at?: string | null;
+}
+
+export interface TradeJournalSummary {
+  total_trades: number;
+  winning_trades: number;
+  losing_trades: number;
+  win_rate: string | null;
+  total_pnl: string;
+  avg_pnl: string | null;
+  best_trade: string | null;
+  worst_trade: string | null;
+}
+
 export const api = {
   getSystemStatus: () => request<SystemStatus>('/api/system/status'),
   toggleKillSwitch: (enabled: boolean) =>
@@ -211,4 +267,22 @@ export const api = {
     request<Kline[]>(`/api/market/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`),
   getOrderbook: (symbol: string, limit: number = 20) =>
     request<Orderbook>(`/api/market/orderbook?symbol=${encodeURIComponent(symbol)}&limit=${limit}`),
+  getJournals: (params?: { page?: number; page_size?: number; symbol?: string; status?: string }) => {
+    const qs = new URLSearchParams();
+    if (params?.page) qs.set('page', String(params.page));
+    if (params?.page_size) qs.set('page_size', String(params.page_size));
+    if (params?.symbol) qs.set('symbol', params.symbol);
+    if (params?.status) qs.set('status', params.status);
+    return request<{ items: TradeJournal[]; total: number; page: number; page_size: number }>(
+      `/api/journals?${qs.toString()}`
+    );
+  },
+  getJournal: (id: string) => request<TradeJournal>(`/api/journals/${id}`),
+  createJournal: (data: TradeJournalCreate) =>
+    request<TradeJournal>('/api/journals', { method: 'POST', body: JSON.stringify(data) }),
+  updateJournal: (id: string, data: Partial<TradeJournalCreate>) =>
+    request<TradeJournal>(`/api/journals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteJournal: (id: string) => request<{ deleted: boolean }>(`/api/journals/${id}`, { method: 'DELETE' }),
+  getJournalSummary: (symbol?: string) =>
+    request<TradeJournalSummary>(`/api/journals/summary${symbol ? `?symbol=${symbol}` : ''}`),
 };
