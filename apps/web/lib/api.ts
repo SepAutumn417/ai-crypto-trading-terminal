@@ -231,6 +231,27 @@ export interface TradeJournalSummary {
   worst_trade: string | null;
 }
 
+export interface AIIndicatorSignal {
+  name: string;
+  value: string | null;
+  signal: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell';
+  weight: string;
+  score: string;
+  explanation: string;
+}
+
+export interface AIEvaluationResult {
+  symbol: string;
+  direction: string;
+  overall_score: string;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  recommendation: string;
+  signals: AIIndicatorSignal[];
+  summary: string;
+  risk_level: string;
+  conviction: string;
+}
+
 export const api = {
   getSystemStatus: () => request<SystemStatus>('/api/system/status'),
   toggleKillSwitch: (enabled: boolean) =>
@@ -285,4 +306,19 @@ export const api = {
   deleteJournal: (id: string) => request<{ deleted: boolean }>(`/api/journals/${id}`, { method: 'DELETE' }),
   getJournalSummary: (symbol?: string) =>
     request<TradeJournalSummary>(`/api/journals/summary${symbol ? `?symbol=${symbol}` : ''}`),
+  evaluateOpportunity: (params: {
+    symbol: string;
+    direction: 'LONG' | 'SHORT';
+    entry_price: string;
+    interval?: KlineInterval;
+    limit?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    qs.set('symbol', params.symbol);
+    qs.set('direction', params.direction);
+    qs.set('entry_price', params.entry_price);
+    if (params.interval) qs.set('interval', params.interval);
+    if (params.limit) qs.set('limit', String(params.limit));
+    return request<AIEvaluationResult>(`/api/ai/evaluate?${qs.toString()}`);
+  },
 };

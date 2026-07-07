@@ -12,6 +12,7 @@ members = [
     "packages/decision-gate",
     "packages/config-versioning",
     "packages/exchange-adapter",
+    "packages/ai-evaluator",
     "apps/api",
 ]
 

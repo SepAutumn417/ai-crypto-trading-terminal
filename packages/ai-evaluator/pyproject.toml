@@ -1,0 +1,22 @@
+[project]
+name = "ai-evaluator"
+version = "0.1.0"
+description = "AI evaluation module for trading opportunities"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.5.0",
+    "exchange-adapter",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_evaluator"]
+
+[tool.uv.sources]
+exchange-adapter = { workspace = true }
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "pytest-asyncio>=0.23.0"]
