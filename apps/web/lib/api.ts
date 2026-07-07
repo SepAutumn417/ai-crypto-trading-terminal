@@ -70,6 +70,11 @@ export interface TradePlan {
   risk_config_version: string | null;
   strategy_config_version: string | null;
   user_trading_config_version: string | null;
+  exchange_order_id: string | null;
+  client_order_id: string | null;
+  filled_quantity: string | null;
+  average_fill_price: string | null;
+  execution_error: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -277,6 +282,12 @@ export const api = {
     request<TradePlan>('/api/trade-plans', { method: 'POST', body: JSON.stringify(input) }),
   checkPlan: (id: string) =>
     request<CheckResult>(`/api/trade-plans/${id}/check`, { method: 'POST' }),
+  executePlan: (id: string) =>
+    request<TradePlan>(`/api/trade-plans/${id}/execute`, { method: 'POST' }),
+  syncOrderStatus: (id: string) =>
+    request<TradePlan>(`/api/trade-plans/${id}/sync`, { method: 'POST' }),
+  cancelPlanOrder: (id: string) =>
+    request<TradePlan>(`/api/trade-plans/${id}/cancel`, { method: 'POST' }),
   listPlans: (status?: string) =>
     request<TradePlan[]>(status ? `/api/trade-plans?status=${status}` : '/api/trade-plans'),
   getPlan: (id: string) => request<TradePlan>(`/api/trade-plans/${id}`),
