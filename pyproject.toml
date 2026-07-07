@@ -11,6 +11,7 @@ members = [
     "packages/risk-engine",
     "packages/decision-gate",
     "packages/config-versioning",
+    "packages/exchange-adapter",
     "apps/api",
 ]
 
