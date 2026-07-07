@@ -162,3 +162,23 @@ def test_min_stop_distance_above_threshold_does_not_block():
     # stop_distance_percent=0.008 = 0.8% > 0.3%
     r = _run(sizing=_sizing(stop_distance_percent=Decimal("0.008")))
     assert not any("stop_distance_too_small" in x for x in r.block_reasons)
+
+
+def test_notional_equity_ratio_exceeded_blocks():
+    """名义价值/权益比超过上限时应 BLOCK。"""
+    # notional=35000, equity=1500 → ratio≈23.3 > 20 → BLOCK
+    r = _run(
+        sizing=_sizing(
+            notional_value=Decimal("35000"),
+            equity=Decimal("1500"),
+        ),
+    )
+    assert r.status == RiskStatus.BLOCK
+    assert any("notional_equity_ratio_exceeded" in x for x in r.block_reasons)
+
+
+def test_notional_equity_ratio_below_threshold_does_not_block():
+    """名义价值/权益比在阈值内时不应因该规则 BLOCK。"""
+    # notional=1872, equity=1500 → ratio≈1.25 < 20
+    r = _run()
+    assert not any("notional_equity_ratio_exceeded" in x for x in r.block_reasons)

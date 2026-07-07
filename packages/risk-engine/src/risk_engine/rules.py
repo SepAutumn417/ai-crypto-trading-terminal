@@ -74,6 +74,13 @@ def check_hard_blocks(
     if plan.stop_loss_price is not None and sizing.rounded_size is None:
         reasons.append(f"sizing_failed: {', '.join(sizing.sizing_warnings) or 'rounded_size is None'}")
 
+    if sizing.equity > 0 and sizing.notional_value / sizing.equity > risk_cfg.max_notional_equity_ratio:
+        reasons.append(
+            f"notional_equity_ratio_exceeded: "
+            f"notional/equity={sizing.notional_value / sizing.equity:.2f} "
+            f"> {risk_cfg.max_notional_equity_ratio}"
+        )
+
     return reasons
 
 

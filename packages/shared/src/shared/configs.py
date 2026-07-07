@@ -25,6 +25,7 @@ class RiskConfig(BaseModel):
     daily_loss_limit_r: Decimal
     max_consecutive_losses: int
     cooldown_minutes_after_loss: int
+    max_notional_equity_ratio: Decimal = Decimal("20")
 
 
 class ExecutionConfig(BaseModel):
