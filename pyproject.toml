@@ -1,0 +1,19 @@
+[project]
+name = "crypto-terminal"
+version = "0.1.0"
+description = "AI Personal Trading Terminal L4 - v0.1"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = [
+    "packages/shared",
+    "packages/position-sizing",
+    "packages/risk-engine",
+    "packages/decision-gate",
+    "packages/config-versioning",
+    "apps/api",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "apps/api/tests"]
