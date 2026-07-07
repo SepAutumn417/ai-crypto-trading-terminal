@@ -19,6 +19,21 @@ def calculate(
     if isinstance(symbol_rules, SymbolRules):
         raise TypeError("请传入 SymbolRule 而非 SymbolRules")
 
+    if equity <= 0:
+        raise ValueError(f"equity 必须为正数，当前值: {equity}")
+    if risk_percent < 0:
+        raise ValueError(f"risk_percent 不能为负数，当前值: {risk_percent}")
+    if entry_price <= 0:
+        raise ValueError(f"entry_price 必须为正数，当前值: {entry_price}")
+    if leverage <= 0:
+        raise ValueError(f"leverage 必须为正数，当前值: {leverage}")
+    if fee_rate < 0:
+        raise ValueError(f"fee_rate 不能为负数，当前值: {fee_rate}")
+    if stop_loss_price is not None and stop_loss_price <= 0:
+        raise ValueError(f"stop_loss_price 必须为正数，当前值: {stop_loss_price}")
+    if any(tp <= 0 for tp in take_profit_prices):
+        raise ValueError("take_profit_prices 中的价格必须为正数")
+
     risk_amount = equity * risk_percent / Decimal("100")
 
     if stop_loss_price is None or entry_price == 0:
