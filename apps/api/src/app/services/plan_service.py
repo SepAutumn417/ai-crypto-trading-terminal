@@ -102,39 +102,40 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         risk_result=risk, execution_enabled=exec_enabled, kill_switch=kill_sw,
     )
 
-    sizing_model = PositionSizingResultModel(
-        id=uuid4(), trade_plan_id=plan_id,
-        equity=sizing.equity, risk_percent=sizing.risk_percent, risk_amount=sizing.risk_amount,
-        entry_price=sizing.entry_price, stop_loss_price=sizing.stop_loss_price,
-        stop_distance_percent=sizing.stop_distance_percent, notional_value=sizing.notional_value,
-        raw_size=sizing.raw_size, rounded_size=sizing.rounded_size,
-        required_margin=sizing.required_margin, leverage=sizing.leverage,
-        estimated_fee=sizing.estimated_fee, risk_reward_ratio=sizing.risk_reward_ratio,
-        estimated_loss_at_stop=sizing.estimated_loss_at_stop, sizing_warnings=sizing.sizing_warnings,
-    )
-    risk_model = RiskCheckModel(
-        id=uuid4(), trade_plan_id=plan_id, status=risk.status.value,
-        risk_amount=risk.risk_amount, notional_value=risk.notional_value,
-        required_margin=risk.required_margin, risk_reward_ratio=risk.risk_reward_ratio,
-        max_allowed_risk_percent=risk.max_allowed_risk_percent,
-        warnings=risk.warnings, block_reasons=risk.block_reasons,
-        risk_config_version=risk_ver,
-    )
-    decision_model = DecisionGateResultModel(
-        id=uuid4(), trade_plan_id=plan_id, risk_check_id=risk_model.id,
-        result=decision.result.value, reasons=decision.reasons,
-    )
-    db.add_all([sizing_model, risk_model])
-    await db.flush()
-    db.add(decision_model)
+    async with db.begin_nested():
+        sizing_model = PositionSizingResultModel(
+            id=uuid4(), trade_plan_id=plan_id,
+            equity=sizing.equity, risk_percent=sizing.risk_percent, risk_amount=sizing.risk_amount,
+            entry_price=sizing.entry_price, stop_loss_price=sizing.stop_loss_price,
+            stop_distance_percent=sizing.stop_distance_percent, notional_value=sizing.notional_value,
+            raw_size=sizing.raw_size, rounded_size=sizing.rounded_size,
+            required_margin=sizing.required_margin, leverage=sizing.leverage,
+            estimated_fee=sizing.estimated_fee, risk_reward_ratio=sizing.risk_reward_ratio,
+            estimated_loss_at_stop=sizing.estimated_loss_at_stop, sizing_warnings=sizing.sizing_warnings,
+        )
+        risk_model = RiskCheckModel(
+            id=uuid4(), trade_plan_id=plan_id, status=risk.status.value,
+            risk_amount=risk.risk_amount, notional_value=risk.notional_value,
+            required_margin=risk.required_margin, risk_reward_ratio=risk.risk_reward_ratio,
+            max_allowed_risk_percent=risk.max_allowed_risk_percent,
+            warnings=risk.warnings, block_reasons=risk.block_reasons,
+            risk_config_version=risk_ver,
+        )
+        decision_model = DecisionGateResultModel(
+            id=uuid4(), trade_plan_id=plan_id, risk_check_id=risk_model.id,
+            result=decision.result.value, reasons=decision.reasons,
+        )
+        db.add_all([sizing_model, risk_model])
+        await db.flush()
+        db.add(decision_model)
 
-    if decision.result == DecisionGateStatus.ALLOW_CONFIRM:
-        model.status = PlanStatus.READY_FOR_CONFIRMATION.value
-    else:
-        model.status = PlanStatus.CHECKED.value
+        if decision.result == DecisionGateStatus.ALLOW_CONFIRM:
+            model.status = PlanStatus.READY_FOR_CONFIRMATION.value
+        else:
+            model.status = PlanStatus.CHECKED.value
 
-    model.risk_config_version = risk_ver
-    model.strategy_config_version = grade_ver
+        model.risk_config_version = risk_ver
+        model.strategy_config_version = grade_ver
 
     await db.commit()
     await db.refresh(model)

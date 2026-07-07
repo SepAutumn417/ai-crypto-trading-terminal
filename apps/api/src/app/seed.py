@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
@@ -17,6 +18,7 @@ SEED_RISK_V1 = {
     "daily_loss_limit_r": Decimal("2"),
     "max_consecutive_losses": 2,
     "cooldown_minutes_after_loss": 30,
+    "max_notional_equity_ratio": Decimal("20"),  # 名义价值/权益上限
 }
 
 SEED_EXECUTION_V1 = {
@@ -115,7 +117,7 @@ async def seed_all(db: AsyncSession) -> None:
                 version_label=label,
                 payload=_decimal_to_str(payload),
                 is_active=True,
-                activated_at=None,
+                activated_at=datetime.now(timezone.utc),
             ))
 
     await db.commit()

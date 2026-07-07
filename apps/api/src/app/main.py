@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from app.api.router import api_router
+from app.exceptions import AppException
 from app.response import ApiResponse
 
 
@@ -17,6 +19,47 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    detail = exc.detail if isinstance(exc.detail, dict) else {"code": exc.code, "message": str(exc.detail)}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=ApiResponse.err(
+            detail.get("code", exc.code),
+            detail.get("message", str(exc.detail)),
+            detail.get("details"),
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content=ApiResponse.err(
+            "VALIDATION_ERROR",
+            "请求参数验证失败",
+            {"errors": exc.errors()},
+        ).model_dump(),
+    )
+
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError) -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content=ApiResponse.err("INVALID_INPUT", str(exc)).model_dump(),
+    )
+
+
+@app.exception_handler(LookupError)
+async def lookup_error_handler(request: Request, exc: LookupError) -> JSONResponse:
+    return JSONResponse(
+        status_code=404,
+        content=ApiResponse.err("NOT_FOUND", str(exc)).model_dump(),
+    )
 
 
 @app.get("/api/health")

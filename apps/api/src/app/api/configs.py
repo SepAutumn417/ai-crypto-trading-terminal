@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.db import get_db
 from app.models import ConfigVersionModel
@@ -104,16 +105,36 @@ async def activate_config(
     if target is None:
         return ApiResponse.err("CONFIG_NOT_FOUND", f"配置 {version_id} 不存在").model_dump()
 
+    config_type = target.config_type
+
+    await db.execute(
+        select(ConfigVersionModel)
+        .where(ConfigVersionModel.config_type == config_type)
+        .with_for_update()
+    )
+
     await db.execute(
         update(ConfigVersionModel)
         .where(
-            ConfigVersionModel.config_type == target.config_type,
+            ConfigVersionModel.config_type == config_type,
             ConfigVersionModel.id != version_id,
+            ConfigVersionModel.is_active == True,  # noqa: E712
         )
         .values(is_active=False)
     )
-    target.is_active = True
-    target.activated_at = datetime.now(timezone.utc)
-    await db.commit()
+
+    if not target.is_active:
+        target.is_active = True
+        target.activated_at = datetime.now(timezone.utc)
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return ApiResponse.err(
+            "ACTIVATE_CONFLICT",
+            "激活配置冲突，请稍后重试",
+        ).model_dump()
+
     await db.refresh(target)
     return ApiResponse.ok(_to_out(target).model_dump()).model_dump()
