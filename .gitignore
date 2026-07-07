@@ -25,3 +25,4 @@ Thumbs.db
 
 # 工具
 .superpowers/
+.uv_install/
