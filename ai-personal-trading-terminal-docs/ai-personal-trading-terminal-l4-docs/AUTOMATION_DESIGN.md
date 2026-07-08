@@ -175,3 +175,37 @@ Decision Gate 输出：
 - `EXPIRED`。
 
 只有 `ALLOW_CONFIRM` 可以进入 `Order Preview`。
+
+---
+
+## 9. 候选计划 ↔ 订单意图状态映射
+
+> 候选计划状态机（§4）与订单意图状态机（`ORDER_LIFECYCLE.md §1`）都有 `RISK_CHECKED / AI_EVALUATED`，但语义不同：候选计划侧是"预检查"，订单意图侧是"正式检查落库"。promote 时需做状态映射。
+
+| 候选计划状态 | → promote 后订单意图初始状态 | 说明 |
+|---|---|---|
+| `DISCOVERED` / `WATCHING` | 不可 promote | 候选计划未就绪 |
+| `READY` | `DRAFT` | promote 后从 DRAFT 起重新走正式风控/AI/决策门 |
+| `RISK_CHECKED` | `DRAFT` | 候选侧的预检查不复用，promote 后重新 check |
+| `AI_EVALUATED` | `DRAFT` | 同上，AI 评估需基于正式 trade_plan 重跑 |
+| `ALLOW_CONFIRM` | `READY_FOR_CONFIRMATION` | 候选侧已确认可执行，promote 后直接进入确认态（但仍需用户在订单预览页二次确认） |
+| `WAIT` / `BLOCK` | 不可 promote | 候选计划未通过 |
+| `EXPIRED` | 不可 promote | 已失效 |
+
+---
+
+## 10. Promote 流程
+
+`POST /api/auto-plans/{id}/promote` 把候选计划提升为正式交易计划。
+
+流程：
+
+1. 校验候选计划 `status` ∈ {`READY`, `RISK_CHECKED`, `AI_EVALUATED`, `ALLOW_CONFIRM`}，否则返回 `PLAN_STATUS_ERROR`；
+2. 复制字段：`exchange / symbol / direction / setup_type / entry_price / stop_loss_price / take_profit_prices / risk_reward_ratio / opportunity_grade` 从 `candidate_plans` 复制到新 `trade_plans` 行；
+3. `trade_plans.candidate_plan_id` 写入原候选计划 id（外键关联）；
+4. 候选计划 `status` 置为 `PROMOTED`（新增状态，表示已提升，防止重复 promote）；
+5. 候选计划后续状态变化**不影响**已 promote 的 trade_plan（字段已复制，非引用）；
+6. `trade_plans.status` 按 §9 映射表设置初始状态；
+7. 整个 promote 在单事务内完成。
+
+> 字段复制而非引用：保证候选计划失效/调整后，已 promote 的正式计划参数不变，可复盘。

@@ -83,6 +83,35 @@ AI不得输出：
 - 写入事件日志；
 - 不允许进入执行。
 
+### 5.1 DecisionGate 合并矩阵（风控 × AI）
+
+> DecisionGate 综合风控结果（RiskStatus）与 AI 评估（`recommendedAction`）输出最终状态（DecisionGateStatus）。以下矩阵为唯一事实源，AI 不能覆盖风控 BLOCK。
+
+| RiskStatus | AI recommendedAction | DecisionGate 输出 | 说明 |
+|---|---|---|---|
+| `BLOCK` | 任意 | `BLOCK` | 风控 BLOCK 永远 BLOCK，AI 不可覆盖 |
+| `REDUCE_RISK` | `DO_NOT_TRADE` | `BLOCK` | AI 拒绝交易，升级为 BLOCK |
+| `REDUCE_RISK` | `WAIT` | `WAIT` | AI 建议等待 |
+| `REDUCE_RISK` | `ALLOW_CONFIRM` | `REDUCE_RISK` | AI 不能把降险升级为确认，保持 REDUCE_RISK |
+| `REDUCE_RISK` | `REDUCE_RISK` | `REDUCE_RISK` | 一致降险 |
+| `WARN` | `DO_NOT_TRADE` | `WAIT` | AI 拒绝，进入等待 |
+| `WARN` | `WAIT` | `WAIT` | 一致等待 |
+| `WARN` | `ALLOW_CONFIRM` | `WAIT` | 风控有警告时不能直接确认，需用户调整后重检 |
+| `WARN` | `REDUCE_RISK` | `WAIT` | 降为等待 |
+| `ALLOW` | `DO_NOT_TRADE` | `WAIT` | 风控通过但 AI 拒绝，进入等待而非 BLOCK |
+| `ALLOW` | `WAIT` | `WAIT` | AI 建议等待 |
+| `ALLOW` | `REDUCE_RISK` | `REDUCE_RISK` | AI 建议降险，采纳 |
+| `ALLOW` | `ALLOW_CONFIRM` | `ALLOW_CONFIRM` | 风控与 AI 一致通过，进入确认 |
+
+规则总结：
+
+1. 风控 `BLOCK` → 永远 `BLOCK`（AI 不可覆盖）；
+2. 风控 `REDUCE_RISK` → AI 最多保持 `REDUCE_RISK` 或降为 `WAIT/BLOCK`，不能升为 `ALLOW_CONFIRM`；
+3. 风控 `ALLOW` → AI 可降级为 `WAIT/REDUCE_RISK`，但不能升为 `BLOCK`（AI 拒绝用 `WAIT` 表达，不用 `BLOCK`）；
+4. `EXPIRED` 由计划过期单独触发，不进入本矩阵。
+
+v0.1 ~ v0.4：`ai_evaluation` 恒为 `None`，DecisionGate 直接按风控结果映射（`ALLOW → ALLOW_CONFIRM`、`WARN → WAIT`、`REDUCE_RISK → REDUCE_RISK`、`BLOCK → BLOCK`）。v0.5 接入 AI 后启用本矩阵。
+
 ---
 
 ## 6. AI调用时机

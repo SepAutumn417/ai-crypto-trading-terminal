@@ -1,0 +1,47 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-dashboard", "page-trade-plans", "page-risk-center"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["sidebar-navigation", "top-status-bar", "root-frame"],
+    "privateRegions": [],
+    "mutableSlots": ["activeNavItem", "pageTitle"],
+    "status": "generated",
+    "children": [
+      {
+        "nodeId": "gen-page-dashboard",
+        "kind": "page-leaf",
+        "pageIds": ["page-dashboard"],
+        "output": "pages/dashboard.html",
+        "sharedRegions": [],
+        "privateRegions": ["dashboard main content area with KPI cards, positions table, opportunity summary, AI market summary"],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-trade-plans",
+        "kind": "page-leaf",
+        "pageIds": ["page-trade-plans"],
+        "output": "pages/trade-plans.html",
+        "sharedRegions": [],
+        "privateRegions": ["trade plans main content with plan list, create form, plan detail"],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "generated",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-risk-center",
+        "kind": "page-leaf",
+        "pageIds": ["page-risk-center"],
+        "output": "pages/risk-center.html",
+        "sharedRegions": [],
+        "privateRegions": ["risk center main content with risk status, config management, kill switch, event log"],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "generated",
+        "children": []
+      }
+    ]
+  }
+}

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易计划</title>
+    <style id="theme-vars">
+/* AI Personal Crypto Trading Terminal — Brand Design Tokens */
+/* Dark professional trading terminal aesthetic */
+
+:root {
+  /* ── Color System ── */
+  /* Background layers */
+  --bg-base: #0a0b0e;
+  --bg-surface: #111318;
+  --bg-elevated: #1a1d25;
+  --bg-overlay: #21252f;
+  --bg-hover: #282d3a;
+
+  /* Primary: Emerald green — trust, growth, "go" signal */
+  --color-primary: #10b981;
+  --color-primary-hover: #34d399;
+  --color-primary-muted: rgba(16, 185, 129, 0.15);
+  --color-primary-border: rgba(16, 185, 129, 0.3);
+
+  /* State colors */
+  --state-success: #10b981;
+  --state-warning: #f59e0b;
+  --state-error: #ef4444;
+  --state-info: #3b82f6;
+  --state-success-muted: rgba(16, 185, 129, 0.12);
+  --state-warning-muted: rgba(245, 158, 11, 0.12);
+  --state-error-muted: rgba(239, 68, 68, 0.12);
+  --state-info-muted: rgba(59, 130, 246, 0.12);
+
+  /* Long/Short colors */
+  --color-long: #10b981;
+  --color-short: #ef4444;
+  --color-long-muted: rgba(16, 185, 129, 0.1);
+  --color-short-muted: rgba(239, 68, 68, 0.1);
+
+  /* Text hierarchy */
+  --text-primary: #e8eaed;
+  --text-secondary: #8b8fa3;
+  --text-tertiary: #565b6e;
+  --text-inverse: #0a0b0e;
+
+  /* Borders */
+  --border-default: #1e2230;
+  --border-subtle: #171a24;
+  --border-strong: #2a2f3e;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.6875rem;   /* 11px */
+  --text-sm: 0.75rem;     /* 12px */
+  --text-base: 0.8125rem; /* 13px */
+  --text-md: 0.875rem;     /* 14px */
+  --text-lg: 1rem;         /* 16px */
+  --text-xl: 1.125rem;     /* 18px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 2rem;        /* 32px */
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Shape ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* ── Surface & Depth ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Dark mode is the default and only mode for this terminal ── */
+html.dark, html {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* ── Typography Utilities ── */
+.font-mono { font-family: var(--font-mono); }
+.font-sans { font-family: var(--font-sans); }
+
+.text-mono-number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ── Surface Utilities ── */
+.surface-base { background: var(--bg-base); }
+.surface-surface { background: var(--bg-surface); }
+.surface-elevated { background: var(--bg-elevated); }
+.surface-overlay { background: var(--bg-overlay); }
+
+/* ── Card Pattern ── */
+.card-terminal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.card-terminal-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Status Indicator ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.status-dot-success { background: var(--state-success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+.status-dot-warning { background: var(--state-warning); box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.status-dot-error   { background: var(--state-error); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+
+/* ── Badge / Tag ── */
+.badge-grade-a { background: var(--state-success-muted); color: var(--state-success); }
+.badge-grade-b { background: var(--state-info-muted); color: var(--state-info); }
+.badge-grade-c { background: var(--state-warning-muted); color: var(--state-warning); }
+.badge-blocked  { background: var(--state-error-muted); color: var(--state-error); }
+.badge-long     { background: var(--color-long-muted); color: var(--color-long); }
+.badge-short    { background: var(--color-short-muted); color: var(--color-short); }
+
+/* ── Button ── */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: background 150ms ease;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: all 150ms ease;
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.btn-danger {
+  background: var(--state-error-muted);
+  color: var(--state-error);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--bg-surface); color: var(--bg-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+    <main>
+<!-- Project Shell Fragment — shared layout for all pages -->
+<style>
+  /* ── Shell Shared Styles ── */
+  .shell-root {
+    font-family: var(--font-sans);
+  }
+
+  /* Nav item base */
+  [data-nav-key] {
+    transition: background 120ms ease, color 120ms ease;
+    text-decoration: none;
+  }
+  [data-nav-key]:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* Nav active state (set via data-active="true" by leaf pages) */
+  [data-nav-key][data-active="true"] {
+    background: var(--color-primary-muted);
+    color: var(--color-primary);
+  }
+
+  /* Nav icon sizing */
+  [data-nav-key] svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Nav disabled */
+  [data-nav-key].nav-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Status badge mono numbers */
+  .status-badge-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-tight);
+  }
+</style>
+
+<div class="flex h-screen shell-root" style="background: var(--bg-base);">
+
+  <!-- ── Left Sidebar ── -->
+  <aside class="w-56 flex-shrink-0 flex flex-col border-r" style="border-color: var(--border-default); background: var(--bg-surface);">
+
+    <!-- Logo / Brand -->
+    <div class="h-12 flex items-center px-4 border-b" style="border-color: var(--border-default);">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-right: var(--space-2); flex-shrink:0;">
+        <rect x="1" y="1" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4"/>
+        <rect x="10" y="1" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.5"/>
+        <rect x="1" y="10" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.5"/>
+        <rect x="10" y="10" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.25"/>
+      </svg>
+      <span class="font-semibold text-sm" style="color: var(--color-primary);">AI Terminal</span>
+    </div>
+
+    <!-- Navigation Items -->
+    <nav class="flex-1 py-3 px-2 space-y-1">
+
+      <!-- Dashboard -->
+      <a data-nav-key="dashboard" data-dom-id="nav-dashboard" href="#" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="1" width="5.5" height="5.5" rx="1"/>
+          <rect x="9.5" y="1" width="5.5" height="5.5" rx="1"/>
+          <rect x="1" y="9.5" width="5.5" height="5.5" rx="1"/>
+          <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1"/>
+        </svg>
+        <span>仪表盘</span>
+      </a>
+
+      <!-- Trade Plans (ACTIVE) -->
+      <a data-nav-key="trade-plans" data-dom-id="nav-trade-plans" href="#" data-active="true" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3h10"/>
+          <path d="M3 6h10"/>
+          <path d="M3 9h7"/>
+          <path d="M3 12h4"/>
+          <path d="M11 10.5l2 2 2-2"/>
+        </svg>
+        <span>交易计划</span>
+      </a>
+
+      <!-- Risk Center -->
+      <a data-nav-key="risk-center" data-dom-id="nav-risk-center" href="#" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 1.5L2 4v4c0 3.5 2.6 6.7 6 7.5 3.4-.8 6-4 6-7.5V4L8 1.5z"/>
+          <path d="M5.5 8l2 2 3.5-3.5"/>
+        </svg>
+        <span>风控中心</span>
+      </a>
+
+      <!-- Settings (disabled) -->
+      <a data-nav-key="settings" href="#" class="flex items-center gap-3 px-3 py-2 rounded text-sm nav-disabled" style="color: var(--text-tertiary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1.5v1.5"/>
+          <path d="M8 13v1.5"/>
+          <path d="M1.5 8h1.5"/>
+          <path d="M13 8h1.5"/>
+          <path d="M3.4 3.4l1 1"/>
+          <path d="M11.6 11.6l1 1"/>
+          <path d="M3.4 12.6l1-1"/>
+          <path d="M11.6 4.4l1-1"/>
+        </svg>
+        <span>设置</span>
+      </a>
+
+    </nav>
+
+    <!-- Bottom: System Status -->
+    <div class="px-4 py-3 border-t text-xs" style="border-color: var(--border-default); color: var(--text-tertiary);">
+      <div class="flex items-center gap-2">
+        <span class="status-dot status-dot-success"></span>
+        <span>系统在线</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main Area ── -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top Status Bar -->
+    <header class="h-12 flex items-center justify-between px-6 border-b flex-shrink-0" style="border-color: var(--border-default); background: var(--bg-surface);">
+
+      <!-- Left: Page Title -->
+      <div>
+        <h1 class="text-sm font-medium" style="color: var(--text-primary);">交易计划</h1>
+      </div>
+
+      <!-- Right: Status Indicators -->
+      <div class="flex items-center gap-4">
+
+        <!-- Execution Mode Badge -->
+        <div class="flex items-center gap-2 px-2 py-1 rounded text-xs" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
+          <span class="status-dot status-dot-warning" style="width:6px;height:6px;"></span>
+          <span style="color: var(--text-secondary);">执行模式: 关闭</span>
+        </div>
+
+        <!-- Kill Switch Badge -->
+        <div class="flex items-center gap-2 px-2 py-1 rounded text-xs" style="background: var(--state-error-muted); border: 1px solid rgba(239,68,68,0.2);">
+          <span class="status-dot status-dot-error" style="width:6px;height:6px;"></span>
+          <span style="color: var(--state-error);">紧急熔断: 开启</span>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- ── Trade Plans Content: 2-Panel Split ── -->
+    <main class="flex-1 overflow-hidden flex" style="background: var(--bg-base);">
+
+      <!-- ── Left Panel: Plan List (~35%) ── -->
+      <div class="flex flex-col border-r" style="width: 35%; min-width: 340px; border-color: var(--border-default);">
+
+        <!-- Panel Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: var(--border-default);">
+          <span class="font-semibold" style="font-size: var(--text-md); color: var(--text-primary);">计划列表</span>
+          <button class="btn-primary" style="font-size: var(--text-xs); padding: var(--space-1) var(--space-3);">+ 新建计划</button>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="flex items-center gap-2 px-4 py-2 border-b" style="border-color: var(--border-default);">
+          <button class="filter-btn filter-active">全部</button>
+          <button class="filter-btn">活跃</button>
+          <button class="filter-btn">已检查</button>
+        </div>
+
+        <!-- Plan List (scrollable) -->
+        <div class="flex-1 overflow-y-auto" style="scrollbar-width: thin;">
+
+          <!-- Plan 1: BTCUSDT LONG (selected) -->
+          <div class="plan-row plan-selected px-4 py-3 border-b" style="border-bottom-color: var(--border-subtle);">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold mono-num" style="font-size: var(--text-md); color: var(--text-primary);">BTCUSDT</span>
+                <span class="badge-long">LONG</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="badge-grade-a">A</span>
+                <span class="badge-status-draft">草稿</span>
+              </div>
+            </div>
+            <div class="mb-1" style="font-size: var(--text-xs); color: var(--text-secondary);">支撑区间反弹</div>
+            <div class="flex items-center gap-3 mono-num" style="font-size: var(--text-xs); color: var(--text-tertiary);">
+              <span>入场 <span style="color: var(--text-secondary);">62,400</span></span>
+              <span>止损 <span style="color: var(--state-error);">61,900</span></span>
+              <span>止盈 <span style="color: var(--state-success);">63,800</span></span>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+              <span class="mono-num" style="font-size: var(--text-xs); color: var(--text-secondary);">盈亏比: <span style="color: var(--color-primary);">2.4</span></span>
+            </div>
+          </div>
+
+          <!-- Plan 2: ETHUSDT SHORT -->
+          <div class="plan-row px-4 py-3 border-b" style="border-bottom-color: var(--border-subtle);">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold mono-num" style="font-size: var(--text-md); color: var(--text-primary);">ETHUSDT</span>
+                <span class="badge-short">SHORT</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="badge-grade-b">B</span>
+                <span class="badge-status-checked">已检查</span>
+              </div>
+            </div>
+            <div class="mb-1" style="font-size: var(--text-xs); color: var(--text-secondary);">阻力位拒绝</div>
+            <div class="flex items-center gap-3 mono-num" style="font-size: var(--text-xs); color: var(--text-tertiary);">
+              <span>入场 <span style="color: var(--text-secondary);">3,450</span></span>
+              <span>止损 <span style="color: var(--state-error);">3,490</span></span>
+              <span>止盈 <span style="color: var(--state-success);">3,380</span></span>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+              <span class="mono-num" style="font-size: var(--text-xs); color: var(--text-secondary);">盈亏比: <span style="color: var(--color-primary);">1.8</span></span>
+            </div>
+          </div>
+
+          <!-- Plan 3: SOLUSDT LONG -->
+          <div class="plan-row px-4 py-3 border-b" style="border-bottom-color: var(--border-subtle);">
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2">
+                <span class="font-semibold mono-num" style="font-size: var(--text-md); color: var(--text-primary);">SOLUSDT</span>
+                <span class="badge-long">LONG</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="badge-grade-a">A</span>
+                <span class="badge-status-ready">待确认</span>
+              </div>
+            </div>
+            <div class="mb-1" style="font-size: var(--text-xs); color: var(--text-secondary);">突破回踩</div>
+            <div class="flex items-center gap-3 mono-num" style="font-size: var(--text-xs); color: var(--text-tertiary);">
+              <span>入场 <span style="color: var(--text-secondary);">145.20</span></span>
+              <span>止损 <span style="color: var(--state-error);">143.80</span></span>
+              <span>止盈 <span style="color: var(--state-success);">148.00</span></span>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+              <span class="mono-num" style="font-size: var(--text-xs); color: var(--text-secondary);">盈亏比: <span style="color: var(--color-primary);">1.8</span></span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ── Right Panel: Plan Detail (~65%) ── -->
+      <div class="flex-1 overflow-y-auto p-5" style="scrollbar-width: thin;">
+
+        <!-- Plan Header -->
+        <div class="flex items-center gap-3 mb-4">
+          <span class="font-bold mono-num" style="font-size: var(--text-xl); color: var(--text-primary);">BTCUSDT</span>
+          <span class="badge-long" style="font-size: var(--text-xs); padding: 2px 8px;">LONG</span>
+          <span class="badge-status-draft" style="font-size: var(--text-xs); padding: 2px 8px;">草稿</span>
+          <span class="badge-grade-a" style="font-size: var(--text-xs); padding: 2px 8px;">A级</span>
+          <div class="flex-1"></div>
+          <button class="btn-ghost" style="font-size: var(--text-xs); padding: var(--space-1) var(--space-3);">取消</button>
+        </div>
+
+        <!-- Detail Cards Stack -->
+        <div class="flex flex-col gap-3">
+
+          <!-- Card 1: Position Sizing Result -->
+          <div class="card-terminal" style="padding: var(--space-4);">
+            <div class="detail-card-title">仓位计算结果</div>
+            <div class="grid grid-cols-3 gap-x-6 gap-y-3">
+              <div>
+                <div class="detail-label">风险金额</div>
+                <div class="detail-value">$45.00</div>
+                <div style="font-size: var(--text-xs); color: var(--text-tertiary);">1% x $1,500</div>
+              </div>
+              <div>
+                <div class="detail-label">止损距离</div>
+                <div class="detail-value">0.80%</div>
+              </div>
+              <div>
+                <div class="detail-label">名义价值</div>
+                <div class="detail-value">$5,625.00</div>
+              </div>
+              <div>
+                <div class="detail-label">合约数量</div>
+                <div class="detail-value">0.090 BTC</div>
+              </div>
+              <div>
+                <div class="detail-label">所需保证金</div>
+                <div class="detail-value">$562.50</div>
+              </div>
+              <div>
+                <div class="detail-label">预估手续费</div>
+                <div class="detail-value">$2.81</div>
+              </div>
+              <div>
+                <div class="detail-label">盈亏比</div>
+                <div class="detail-value" style="color: var(--color-primary);">2.40:1</div>
+              </div>
+              <div>
+                <div class="detail-label">预估亏损</div>
+                <div class="detail-value" style="color: var(--state-error);">-$47.81</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Risk Check Result -->
+          <div class="card-terminal" style="padding: var(--space-4);">
+            <div class="detail-card-title">风控检查结果</div>
+            <div class="flex items-center gap-3 mb-3">
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary);">状态:</span>
+              <span class="badge-allow">允许确认</span>
+            </div>
+            <div class="flex items-center gap-3 mb-2">
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); min-width: 68px;">警告:</span>
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary);">无警告</span>
+            </div>
+            <div class="flex items-center gap-3 mb-2">
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); min-width: 68px;">阻止原因:</span>
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary);">无阻止</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary); min-width: 68px;">风控配置版本:</span>
+              <span class="mono-num" style="font-size: var(--text-xs); color: var(--text-secondary);">risk-v1</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Decision Gate Result -->
+          <div class="card-terminal" style="padding: var(--space-4);">
+            <div class="detail-card-title">决策门控结果</div>
+            <div class="flex items-center gap-3 mb-2">
+              <span style="font-size: var(--text-xs); color: var(--text-tertiary);">决策:</span>
+              <span class="badge-allow">允许确认</span>
+            </div>
+            <p style="font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-4);">
+              计划通过所有检查，可以确认。
+            </p>
+            <button class="btn-primary" style="font-size: var(--text-sm); padding: var(--space-2) var(--space-5);">运行检查</button>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+    </main>
+    <script>lucide.createIcons();</script>
+
+    <style>
+      /* Plan row states */
+      .plan-row {
+        border-left: 2px solid transparent;
+        transition: background 120ms ease, border-color 120ms ease;
+        cursor: pointer;
+      }
+      .plan-row:hover {
+        background: var(--bg-hover);
+      }
+      .plan-row.plan-selected {
+        background: var(--color-primary-muted);
+        border-left-color: var(--color-primary);
+      }
+
+      /* Filter buttons */
+      .filter-btn {
+        font-size: var(--text-xs);
+        padding: var(--space-1) var(--space-3);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-default);
+        background: transparent;
+        color: var(--text-secondary);
+        transition: all 120ms ease;
+        cursor: pointer;
+      }
+      .filter-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+      }
+      .filter-btn.filter-active {
+        background: var(--color-primary-muted);
+        color: var(--color-primary);
+        border-color: var(--color-primary-border);
+      }
+
+      /* Status badges */
+      .badge-status-draft {
+        background: var(--state-warning-muted);
+        color: var(--state-warning);
+        font-size: var(--text-xs);
+        padding: 1px 6px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-medium);
+        font-family: var(--font-mono);
+        letter-spacing: var(--tracking-wide);
+      }
+      .badge-status-checked {
+        background: var(--state-info-muted);
+        color: var(--state-info);
+        font-size: var(--text-xs);
+        padding: 1px 6px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-medium);
+        font-family: var(--font-mono);
+        letter-spacing: var(--tracking-wide);
+      }
+      .badge-status-ready {
+        background: var(--state-success-muted);
+        color: var(--state-success);
+        font-size: var(--text-xs);
+        padding: 1px 6px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-medium);
+        font-family: var(--font-mono);
+        letter-spacing: var(--tracking-wide);
+      }
+
+      /* Grade badges (inline) */
+      .badge-grade-a, .badge-grade-b {
+        font-size: var(--text-xs);
+        padding: 1px 5px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-semibold);
+      }
+
+      /* Direction badges (inline) */
+      .badge-long, .badge-short {
+        font-size: var(--text-xs);
+        padding: 1px 5px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-medium);
+      }
+
+      /* Decision badge */
+      .badge-allow {
+        background: var(--state-success-muted);
+        color: var(--state-success);
+        font-size: var(--text-xs);
+        padding: 2px 8px;
+        border-radius: var(--radius-sm);
+        font-weight: var(--weight-semibold);
+        font-family: var(--font-mono);
+        letter-spacing: var(--tracking-wide);
+      }
+
+      /* Mono number utility */
+      .mono-num {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--tracking-tight);
+      }
+
+      /* Detail card label */
+      .detail-label {
+        font-size: var(--text-xs);
+        color: var(--text-tertiary);
+        margin-bottom: 2px;
+      }
+      .detail-value {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--tracking-tight);
+        font-size: var(--text-sm);
+        color: var(--text-primary);
+      }
+
+      /* Detail card section title */
+      .detail-card-title {
+        font-size: var(--text-xs);
+        font-weight: var(--weight-semibold);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-wide);
+        margin-bottom: var(--space-3);
+        padding-bottom: var(--space-2);
+        border-bottom: 1px solid var(--border-subtle);
+      }
+    </style>
+</body>
+</html>

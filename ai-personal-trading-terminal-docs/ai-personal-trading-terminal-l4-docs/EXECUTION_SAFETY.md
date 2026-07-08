@@ -4,12 +4,14 @@
 
 执行系统必须以安全为第一目标。
 
+> **Kill Switch 极性约定**：`kill_switch = true` 表示 Kill Switch 已激活（熔断态），禁止新开仓；`kill_switch = false` 表示恢复交易。下文"Kill Switch 激活"即指 `kill_switch = true`。
+
 规则：
 
 1. 没有风控通过，不允许执行；
 2. 没有用户确认，不允许执行；
 3. 没有止损，不允许执行；
-4. Kill Switch关闭，不允许执行；
+4. Kill Switch 激活（`kill_switch = true`），不允许执行；
 5. 交易所状态不确定，不允许执行；
 6. 数据库无法写入，不允许执行；
 7. API Key权限异常，不允许执行。
@@ -22,7 +24,9 @@
 
 Kill Switch 是执行系统总开关。
 
-### 2.2 关闭后允许
+> Kill Switch 的唯一事实源见 `KILL_SWITCH.md`。本节只描述执行侧的语义。
+
+### 2.2 激活后允许（`kill_switch = true`）
 
 - 查看行情；
 - 查看结构；
@@ -32,7 +36,7 @@ Kill Switch 是执行系统总开关。
 - 撤销订单；
 - 手动确认平仓类减风险操作。
 
-### 2.3 关闭后禁止
+### 2.3 激活后禁止（`kill_switch = true`）
 
 - 开新仓；
 - 加仓；
@@ -135,12 +139,15 @@ Dry Run检查：
 - 开仓时预设止损；
 - 成交后立即设置止损计划单。
 
-如果止损设置失败：
+如果止损设置失败（TP_SL_FAILED）：
 
-- 记录严重事件；
+> 此规则在 `ORDER_LIFECYCLE.md §4.3`、`OPERATIONS.md §3.3`、本文三处统一为：**止损设置失败 → 立即触发 Kill Switch（`kill_switch = true`）+ 记录 CRITICAL 事件 + 禁止新单 + 提供补设止损 UI**。
+
+- 立即触发 Kill Switch（`kill_switch = true`）；
+- 记录 CRITICAL 级别 `system_events`；
 - 通知用户；
 - 禁止新订单；
-- 提供人工处理提示。
+- 提供补设止损确认 UI（一键补设止损）。
 
 ---
 

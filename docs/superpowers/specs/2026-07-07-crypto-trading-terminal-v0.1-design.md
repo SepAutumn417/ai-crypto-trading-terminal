@@ -41,7 +41,9 @@ v0.1 不做业务简化，只做数据源差异处理：
 
 1. **账户权益来源**：v0.1 由用户手动输入并存入 `user_settings.account_equity`。这是 v0.1 范围决定（不接交易所），不是简化。v0.7 接入 Bitget 后改为交易所同步。
 2. **symbol rules**：v0.1 由用户在 Settings 页面配置（默认填 BTC/ETH/SOL 的常见合约参数）。v0.7 接入 Bitget 后用 `getSymbolRules` 真实规则覆盖。
-3. **当日亏损 / 连亏 / 冷却期**：v0.1 完整实现读写和检查逻辑。由于无真实成交，初始值为 0/false。后续版本接入真实成交后自动更新。
+3. **当日亏损 / 连亏 / 冷却期**：v0.1 完整实现检查逻辑，但**写入路径为只读**——`account_risk_state` 表存在并有 seed 初始值（全 0/false），但 v0.1 没有真实成交，没有任何 API/service 会更新这些字段。v0.8 接入真实成交后由 execution-engine 在平仓时更新。v0.1 期间可通过手动构造 DB 数据测试风控规则 6/7/8。
+4. **exchange_connected 降级**：RISK_RULES.md §5 规则 10"WebSocket/交易所状态异常 → BLOCK"，但 v0.1 无交易所接入，`exchange_connected=false` 属正常状态。v0.1 中此项**降级为 warning，不 BLOCK**。v0.7 接入 Bitget 后恢复为 BLOCK。此降级已在 `packages/risk-engine/src/risk_engine/checker.py` 中实现。
+5. **DecisionGate 输入简化**：MODULES.md §10 定义 DecisionGate 输入为 `plan / risk result / AI evaluation / system mode / execution enabled / user settings`。v0.1 简化为 `risk_result / execution_enabled / kill_switch / ai_evaluation(None) / plan_expired`，省略了 `plan` 对象本身、`system mode`、`user settings`（v0.1 无 system mode 切换，user_settings 中的 execution_enabled/kill_switch 已直接传入）。v0.5+ 接入 AI 与 system mode 后补齐。
 
 风控引擎、position-sizing、decision-gate 都是生产级完整实现，后续版本只接入数据源，不重写核心逻辑。
 

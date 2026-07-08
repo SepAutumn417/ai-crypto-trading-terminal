@@ -1,0 +1,94 @@
+{
+  "data": [
+    {
+      "id": "page-dashboard",
+      "title": "Dashboard",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783502700000,
+      "canvasData": {
+        "x": 0,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/dashboard.html",
+        "interactions": [
+          {
+            "domId": "nav-trade-plans",
+            "targetPageId": "page-trade-plans",
+            "transitionLabel": "Go to Trade Plans"
+          },
+          {
+            "domId": "nav-risk-center",
+            "targetPageId": "page-risk-center",
+            "hideEdge": true,
+            "transitionLabel": "Go to Risk Center"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-trade-plans",
+      "title": "Trade Plans",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783502700000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/trade-plans.html",
+        "interactions": [
+          {
+            "domId": "nav-risk-center",
+            "targetPageId": "page-risk-center",
+            "transitionLabel": "Go to Risk Center"
+          },
+          {
+            "domId": "nav-dashboard",
+            "targetPageId": "page-dashboard",
+            "hideEdge": true,
+            "transitionLabel": "Back to Dashboard"
+          }
+        ]
+      }
+    },
+    {
+      "id": "page-risk-center",
+      "title": "Risk Center",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1783502700000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/risk-center.html",
+        "interactions": [
+          {
+            "domId": "nav-dashboard",
+            "targetPageId": "page-dashboard",
+            "hideEdge": true,
+            "transitionLabel": "Back to Dashboard"
+          },
+          {
+            "domId": "nav-trade-plans",
+            "targetPageId": "page-trade-plans",
+            "hideEdge": true,
+            "transitionLabel": "Go to Trade Plans"
+          }
+        ]
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": true,
+    "deviceType": "desktop",
+    "projectName": "AI 交易终端"
+  }
+}

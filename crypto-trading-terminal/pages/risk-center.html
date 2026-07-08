@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>风控中心</title>
+    <style id="theme-vars">
+/* AI Personal Crypto Trading Terminal — Brand Design Tokens */
+/* Dark professional trading terminal aesthetic */
+
+:root {
+  /* ── Color System ── */
+  /* Background layers */
+  --bg-base: #0a0b0e;
+  --bg-surface: #111318;
+  --bg-elevated: #1a1d25;
+  --bg-overlay: #21252f;
+  --bg-hover: #282d3a;
+
+  /* Primary: Emerald green — trust, growth, "go" signal */
+  --color-primary: #10b981;
+  --color-primary-hover: #34d399;
+  --color-primary-muted: rgba(16, 185, 129, 0.15);
+  --color-primary-border: rgba(16, 185, 129, 0.3);
+
+  /* State colors */
+  --state-success: #10b981;
+  --state-warning: #f59e0b;
+  --state-error: #ef4444;
+  --state-info: #3b82f6;
+  --state-success-muted: rgba(16, 185, 129, 0.12);
+  --state-warning-muted: rgba(245, 158, 11, 0.12);
+  --state-error-muted: rgba(239, 68, 68, 0.12);
+  --state-info-muted: rgba(59, 130, 246, 0.12);
+
+  /* Long/Short colors */
+  --color-long: #10b981;
+  --color-short: #ef4444;
+  --color-long-muted: rgba(16, 185, 129, 0.1);
+  --color-short-muted: rgba(239, 68, 68, 0.1);
+
+  /* Text hierarchy */
+  --text-primary: #e8eaed;
+  --text-secondary: #8b8fa3;
+  --text-tertiary: #565b6e;
+  --text-inverse: #0a0b0e;
+
+  /* Borders */
+  --border-default: #1e2230;
+  --border-subtle: #171a24;
+  --border-strong: #2a2f3e;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.6875rem;   /* 11px */
+  --text-sm: 0.75rem;     /* 12px */
+  --text-base: 0.8125rem; /* 13px */
+  --text-md: 0.875rem;     /* 14px */
+  --text-lg: 1rem;         /* 16px */
+  --text-xl: 1.125rem;     /* 18px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 2rem;        /* 32px */
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Shape ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* ── Surface & Depth ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Dark mode is the default and only mode for this terminal ── */
+html.dark, html {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* ── Typography Utilities ── */
+.font-mono { font-family: var(--font-mono); }
+.font-sans { font-family: var(--font-sans); }
+
+.text-mono-number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ── Surface Utilities ── */
+.surface-base { background: var(--bg-base); }
+.surface-surface { background: var(--bg-surface); }
+.surface-elevated { background: var(--bg-elevated); }
+.surface-overlay { background: var(--bg-overlay); }
+
+/* ── Card Pattern ── */
+.card-terminal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.card-terminal-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Status Indicator ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.status-dot-success { background: var(--state-success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+.status-dot-warning { background: var(--state-warning); box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.status-dot-error   { background: var(--state-error); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+
+/* ── Badge / Tag ── */
+.badge-grade-a { background: var(--state-success-muted); color: var(--state-success); }
+.badge-grade-b { background: var(--state-info-muted); color: var(--state-info); }
+.badge-grade-c { background: var(--state-warning-muted); color: var(--state-warning); }
+.badge-blocked  { background: var(--state-error-muted); color: var(--state-error); }
+.badge-long     { background: var(--color-long-muted); color: var(--color-long); }
+.badge-short    { background: var(--color-short-muted); color: var(--color-short); }
+
+/* ── Button ── */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: background 150ms ease;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: all 150ms ease;
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.btn-danger {
+  background: var(--state-error-muted);
+  color: var(--state-error);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  
+  @layer base {
+    body { background: var(--bg-surface); color: var(--bg-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+
+<!-- Project Shell Fragment — shared layout for all pages -->
+<style>
+  /* ── Shell Shared Styles ── */
+  .shell-root {
+    font-family: var(--font-sans);
+  }
+
+  /* Nav item base */
+  [data-nav-key] {
+    transition: background 120ms ease, color 120ms ease;
+    text-decoration: none;
+  }
+  [data-nav-key]:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  /* Nav active state */
+  [data-nav-key][data-active="true"] {
+    background: var(--color-primary-muted);
+    color: var(--color-primary);
+  }
+
+  /* Nav icon sizing */
+  [data-nav-key] svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Nav disabled */
+  [data-nav-key].nav-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  /* Status badge mono numbers */
+  .status-badge-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: var(--tracking-tight);
+  }
+
+  /* ── Risk Center Page Styles ── */
+  .kill-switch-card {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .toggle-track {
+    width: 52px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    position: relative;
+    cursor: pointer;
+    transition: background 200ms ease;
+  }
+  .toggle-track.active {
+    background: var(--state-error);
+  }
+  .toggle-track.inactive {
+    background: var(--color-primary);
+  }
+  .toggle-knob {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-full);
+    background: white;
+    position: absolute;
+    top: 3px;
+    transition: left 200ms ease;
+  }
+  .toggle-track.active .toggle-knob {
+    left: 27px;
+  }
+  .toggle-track.inactive .toggle-knob {
+    left: 3px;
+  }
+
+  .progress-bar-track {
+    height: 4px;
+    border-radius: var(--radius-full);
+    background: var(--bg-elevated);
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 300ms ease;
+  }
+
+  .tab-underline {
+    padding-bottom: var(--space-2);
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 150ms ease, color 150ms ease;
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+  }
+  .tab-underline:hover {
+    color: var(--text-secondary);
+  }
+  .tab-underline.active {
+    border-bottom-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  .event-row:nth-child(even) {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  .event-row {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .severity-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .severity-dot-error { background: var(--state-error); }
+  .severity-dot-warning { background: var(--state-warning); }
+  .severity-dot-success { background: var(--state-success); }
+  .severity-dot-info { background: var(--state-info); }
+</style>
+
+<div class="flex h-screen shell-root" style="background: var(--bg-base);">
+
+  <!-- ── Left Sidebar ── -->
+  <aside class="w-56 flex-shrink-0 flex flex-col border-r" style="border-color: var(--border-default); background: var(--bg-surface);">
+
+    <!-- Logo / Brand -->
+    <div class="h-12 flex items-center px-4 border-b" style="border-color: var(--border-default);">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="margin-right: var(--space-2); flex-shrink:0;">
+        <rect x="1" y="1" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4"/>
+        <rect x="10" y="1" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.5"/>
+        <rect x="1" y="10" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.5"/>
+        <rect x="10" y="10" width="7" height="7" rx="1.5" stroke="var(--color-primary)" stroke-width="1.4" opacity="0.25"/>
+      </svg>
+      <span class="font-semibold text-sm" style="color: var(--color-primary);">AI Terminal</span>
+    </div>
+
+    <!-- Navigation Items -->
+    <nav class="flex-1 py-3 px-2 space-y-1">
+
+      <!-- Dashboard -->
+      <a data-nav-key="dashboard" href="#" data-dom-id="nav-dashboard" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="1" width="5.5" height="5.5" rx="1"/>
+          <rect x="9.5" y="1" width="5.5" height="5.5" rx="1"/>
+          <rect x="1" y="9.5" width="5.5" height="5.5" rx="1"/>
+          <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1"/>
+        </svg>
+        <span>仪表盘</span>
+      </a>
+
+      <!-- Trade Plans -->
+      <a data-nav-key="trade-plans" href="#" data-dom-id="nav-trade-plans" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 3h10"/>
+          <path d="M3 6h10"/>
+          <path d="M3 9h7"/>
+          <path d="M3 12h4"/>
+          <path d="M11 10.5l2 2 2-2"/>
+        </svg>
+        <span>交易计划</span>
+      </a>
+
+      <!-- Risk Center (ACTIVE) -->
+      <a data-nav-key="risk-center" href="#" data-dom-id="nav-risk-center" data-active="true" class="flex items-center gap-3 px-3 py-2 rounded text-sm" style="color: var(--text-secondary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 1.5L2 4v4c0 3.5 2.6 6.7 6 7.5 3.4-.8 6-4 6-7.5V4L8 1.5z"/>
+          <path d="M5.5 8l2 2 3.5-3.5"/>
+        </svg>
+        <span>风控中心</span>
+      </a>
+
+      <!-- Settings (disabled) -->
+      <a data-nav-key="settings" href="#" class="flex items-center gap-3 px-3 py-2 rounded text-sm nav-disabled" style="color: var(--text-tertiary);">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1.5v1.5"/>
+          <path d="M8 13v1.5"/>
+          <path d="M1.5 8h1.5"/>
+          <path d="M13 8h1.5"/>
+          <path d="M3.4 3.4l1 1"/>
+          <path d="M11.6 11.6l1 1"/>
+          <path d="M3.4 12.6l1-1"/>
+          <path d="M11.6 4.4l1-1"/>
+        </svg>
+        <span>设置</span>
+      </a>
+
+    </nav>
+
+    <!-- Bottom: System Status -->
+    <div class="px-4 py-3 border-t text-xs" style="border-color: var(--border-default); color: var(--text-tertiary);">
+      <div class="flex items-center gap-2">
+        <span class="status-dot status-dot-success"></span>
+        <span>系统在线</span>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main Area ── -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+
+    <!-- Top Status Bar -->
+    <header class="h-12 flex items-center justify-between px-6 border-b flex-shrink-0" style="border-color: var(--border-default); background: var(--bg-surface);">
+
+      <!-- Left: Page Title -->
+      <div>
+        <h1 class="text-sm font-medium" style="color: var(--text-primary);">风控中心</h1>
+      </div>
+
+      <!-- Right: Status Indicators -->
+      <div class="flex items-center gap-4">
+
+        <!-- Execution Mode Badge -->
+        <div class="flex items-center gap-2 px-2 py-1 rounded text-xs" style="background: var(--bg-elevated); border: 1px solid var(--border-default);">
+          <span class="status-dot status-dot-warning" style="width:6px;height:6px;"></span>
+          <span style="color: var(--text-secondary);">执行模式: 关闭</span>
+        </div>
+
+        <!-- Kill Switch Badge -->
+        <div class="flex items-center gap-2 px-2 py-1 rounded text-xs" style="background: var(--state-error-muted); border: 1px solid rgba(239,68,68,0.2);">
+          <span class="status-dot status-dot-error" style="width:6px;height:6px;"></span>
+          <span style="color: var(--state-error);">紧急熔断: 开启</span>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="flex-1 overflow-auto p-6" style="background: var(--bg-base);">
+
+      <!-- ═══════════ Top Section: Kill Switch + Execution Status ═══════════ -->
+      <div class="grid gap-4 mb-4" style="grid-template-columns: 1.2fr 1fr;">
+
+        <!-- Kill Switch Control Card (prominent) -->
+        <div class="card-terminal kill-switch-card p-5">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <i data-lucide="shield-alert" style="width:18px;height:18px;color:var(--state-error);"></i>
+                <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">紧急熔断控制</h2>
+              </div>
+              <p class="text-xs" style="color:var(--text-tertiary);">所有交易执行的紧急停止</p>
+            </div>
+            <!-- Toggle Switch Visual -->
+            <div class="toggle-track active" title="紧急熔断已激活">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 mb-4 px-3 py-2 rounded" style="background:var(--state-error-muted);">
+            <span class="status-dot status-dot-error" style="width:8px;height:8px;"></span>
+            <span class="font-medium text-sm" style="color:var(--state-error);">紧急熔断已激活 &mdash; 所有交易已阻止</span>
+          </div>
+          <p class="text-xs mb-4" style="color:var(--text-secondary);line-height:var(--leading-relaxed);">
+            激活后，所有新的交易执行将被阻止。现有持仓保持不变。
+          </p>
+          <button class="btn-danger" style="padding:var(--space-2) var(--space-6);">
+            <span class="flex items-center gap-2">
+              <i data-lucide="power" style="width:14px;height:14px;"></i>
+              关闭紧急熔断
+            </span>
+          </button>
+        </div>
+
+        <!-- Execution Mode Card -->
+        <div class="card-terminal p-5">
+          <div class="flex items-start justify-between mb-4">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <i data-lucide="play-circle" style="width:18px;height:18px;color:var(--text-tertiary);"></i>
+                <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">执行模式</h2>
+              </div>
+              <p class="text-xs" style="color:var(--text-tertiary);">当前执行环境</p>
+            </div>
+          </div>
+
+          <!-- Current Mode -->
+          <div class="flex items-center gap-3 mb-4 px-3 py-2 rounded" style="background:var(--state-warning-muted);">
+            <span class="font-semibold text-xs px-2 py-0.5 rounded" style="background:var(--state-warning);color:var(--text-inverse);font-family:var(--font-mono);">模拟运行</span>
+            <span class="text-xs" style="color:var(--state-warning);">不会向交易所发送真实订单</span>
+          </div>
+
+          <!-- Status Indicators -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs" style="color:var(--text-secondary);">执行启用</span>
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-dot-warning" style="width:6px;height:6px;"></span>
+                <span class="text-xs font-mono" style="color:var(--state-warning);">关闭</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs" style="color:var(--text-secondary);">交易所连接</span>
+              <div class="flex items-center gap-2">
+                <span class="status-dot" style="width:6px;height:6px;background:var(--text-tertiary);"></span>
+                <span class="text-xs" style="color:var(--text-tertiary);">未连接</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-xs" style="color:var(--text-secondary);">数据库</span>
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-dot-success" style="width:6px;height:6px;"></span>
+                <span class="text-xs" style="color:var(--state-success);">正常</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3" style="border-top:1px solid var(--border-subtle);">
+            <button class="btn-ghost text-xs" style="padding:var(--space-1) var(--space-3);">
+              切换模式
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════ Risk Status Metrics ═══════════ -->
+      <div class="grid grid-cols-4 gap-4 mb-4">
+
+        <!-- Daily Loss -->
+        <div class="card-terminal p-4">
+          <div class="text-xs mb-2" style="color:var(--text-tertiary);">当日亏损</div>
+          <div class="flex items-baseline gap-1 mb-3">
+            <span class="text-mono-number font-semibold" style="font-size:var(--text-xl);color:var(--text-primary);">0.00</span>
+            <span class="text-xs" style="color:var(--text-tertiary);">R</span>
+          </div>
+          <div class="progress-bar-track mb-2">
+            <div class="progress-bar-fill" style="width:0%;background:var(--state-success);"></div>
+          </div>
+          <div class="text-xs text-mono-number" style="color:var(--text-tertiary);">/ <span style="color:var(--text-secondary);">2.00 R</span> 上限</div>
+        </div>
+
+        <!-- Consecutive Losses -->
+        <div class="card-terminal p-4">
+          <div class="text-xs mb-2" style="color:var(--text-tertiary);">连续亏损</div>
+          <div class="flex items-baseline gap-1 mb-3">
+            <span class="text-mono-number font-semibold" style="font-size:var(--text-xl);color:var(--text-primary);">0</span>
+            <span class="text-xs" style="color:var(--text-tertiary);">&nbsp;</span>
+          </div>
+          <div class="progress-bar-track mb-2">
+            <div class="progress-bar-fill" style="width:0%;background:var(--state-success);"></div>
+          </div>
+          <div class="text-xs text-mono-number" style="color:var(--text-tertiary);">/ <span style="color:var(--text-secondary);">2</span> 上限</div>
+        </div>
+
+        <!-- Cooldown Status -->
+        <div class="card-terminal p-4">
+          <div class="text-xs mb-2" style="color:var(--text-tertiary);">冷却期状态</div>
+          <div class="flex items-center gap-2 mb-3" style="min-height:28px;">
+            <span class="status-dot status-dot-success" style="width:6px;height:6px;"></span>
+            <span class="text-sm" style="color:var(--text-secondary);">无冷却期</span>
+          </div>
+          <div style="height:20px;"></div>
+          <div class="text-xs" style="color:var(--text-tertiary);">&nbsp;</div>
+        </div>
+
+        <!-- Max Risk -->
+        <div class="card-terminal p-4">
+          <div class="text-xs mb-2" style="color:var(--text-tertiary);">最大风险</div>
+          <div class="flex items-baseline gap-2 mb-3">
+            <span class="text-mono-number font-semibold" style="font-size:var(--text-xl);color:var(--text-primary);">3%</span>
+            <span class="font-semibold text-xs px-1.5 py-0.5 rounded" style="background:var(--state-success-muted);color:var(--state-success);">A级</span>
+          </div>
+          <div style="height:20px;"></div>
+          <div class="text-xs" style="color:var(--text-tertiary);">当前最大允许</div>
+        </div>
+
+      </div>
+
+      <!-- ═══════════ Body Section: 2-Column Layout ═══════════ -->
+      <div class="grid gap-4" style="grid-template-columns: 1.2fr 1fr;">
+
+        <!-- ── Left Column ── -->
+
+        <!-- Active Risk Configuration -->
+        <div class="card-terminal p-5 mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">风控配置</h2>
+              <span class="text-xs px-1.5 py-0.5 rounded font-mono" style="background:var(--bg-elevated);color:var(--text-tertiary);">risk-v1</span>
+              <span class="text-xs px-1.5 py-0.5 rounded font-medium" style="background:var(--state-success-muted);color:var(--state-success);">激活</span>
+            </div>
+            <button class="btn-ghost text-xs" style="padding:var(--space-1) var(--space-3);">
+              编辑
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-x-6 gap-y-3">
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">最大杠杆</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">10x</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">最低盈亏比</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">1.50</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">推荐盈亏比</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">2.00</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">最小止损距离</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">0.30%</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">日亏损限制</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">2.00 R</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">最大连亏次数</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">2</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">亏损后冷却</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">30 min</span>
+            </div>
+            <div class="flex items-center justify-between py-1" style="border-bottom:1px solid var(--border-subtle);">
+              <span class="text-xs" style="color:var(--text-tertiary);">最大风险比例</span>
+              <span class="text-mono-number text-sm font-medium" style="color:var(--text-primary);">3%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opportunity Grade Permissions -->
+        <div class="card-terminal p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">等级权限</h2>
+              <span class="text-xs px-1.5 py-0.5 rounded font-mono" style="background:var(--bg-elevated);color:var(--text-tertiary);">opportunity_grade-v1</span>
+            </div>
+          </div>
+
+          <table class="w-full" style="border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th class="text-left text-xs font-medium pb-2 pr-4" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">等级</th>
+                <th class="text-right text-xs font-medium pb-2 pr-4" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">最大风险</th>
+                <th class="text-right text-xs font-medium pb-2" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="py-2 pr-4" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-sm font-semibold px-1.5 py-0.5 rounded badge-grade-a">A</span>
+                </td>
+                <td class="py-2 pr-4 text-right text-mono-number text-sm" style="color:var(--text-primary);border-bottom:1px solid var(--border-subtle);">3.00%</td>
+                <td class="py-2 text-right" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-xs font-medium px-2 py-0.5 rounded" style="background:var(--state-success-muted);color:var(--state-success);">允许</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-4" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-sm font-semibold px-1.5 py-0.5 rounded badge-grade-b">B</span>
+                </td>
+                <td class="py-2 pr-4 text-right text-mono-number text-sm" style="color:var(--text-primary);border-bottom:1px solid var(--border-subtle);">1.50%</td>
+                <td class="py-2 text-right" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-xs font-medium px-2 py-0.5 rounded" style="background:var(--state-warning-muted);color:var(--state-warning);">降风险</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-4" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-sm font-semibold px-1.5 py-0.5 rounded badge-grade-c">C</span>
+                </td>
+                <td class="py-2 pr-4 text-right text-mono-number text-sm" style="color:var(--text-primary);border-bottom:1px solid var(--border-subtle);">0.00%</td>
+                <td class="py-2 text-right" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-xs font-medium px-2 py-0.5 rounded" style="background:var(--state-error-muted);color:var(--state-error);">阻止</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-4">
+                  <span class="text-sm font-semibold px-1.5 py-0.5 rounded badge-blocked">已阻止</span>
+                </td>
+                <td class="py-2 pr-4 text-right text-mono-number text-sm" style="color:var(--text-primary);">0.00%</td>
+                <td class="py-2 text-right">
+                  <span class="text-xs font-medium px-2 py-0.5 rounded" style="background:var(--state-error-muted);color:var(--state-error);">阻止</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── Right Column ── -->
+
+        <!-- Config Version History -->
+        <div class="card-terminal p-5 mb-4">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">版本历史</h2>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex gap-4 mb-4" style="border-bottom:1px solid var(--border-default);">
+            <div class="tab-underline active">风控</div>
+            <div class="tab-underline">执行</div>
+            <div class="tab-underline">等级</div>
+            <div class="tab-underline">标的</div>
+          </div>
+
+          <!-- Version Table -->
+          <table class="w-full" style="border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th class="text-left text-xs font-medium pb-2 pr-4" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">版本</th>
+                <th class="text-right text-xs font-medium pb-2 pr-4" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">激活时间</th>
+                <th class="text-right text-xs font-medium pb-2" style="color:var(--text-tertiary);border-bottom:1px solid var(--border-default);">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="py-2.5 pr-4 font-mono text-sm" style="color:var(--text-primary);border-bottom:1px solid var(--border-subtle);">risk-v1</td>
+                <td class="py-2.5 pr-4 text-right font-mono text-sm" style="color:var(--text-secondary);border-bottom:1px solid var(--border-subtle);">2024-01-15 10:30</td>
+                <td class="py-2.5 text-right" style="border-bottom:1px solid var(--border-subtle);">
+                  <span class="text-xs font-medium px-2 py-0.5 rounded" style="background:var(--state-success-muted);color:var(--state-success);">激活</span>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2.5 pr-4 font-mono text-sm" style="color:var(--text-primary);">risk-v2</td>
+                <td class="py-2.5 pr-4 text-right font-mono text-sm" style="color:var(--text-secondary);">2024-01-20 14:15</td>
+                <td class="py-2.5 text-right">
+                  <button class="btn-ghost text-xs" style="padding:var(--space-1) var(--space-2);">激活</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Recent Risk Events -->
+        <div class="card-terminal" style="max-height:320px;display:flex;flex-direction:column;">
+          <div class="flex items-center justify-between p-5 pb-3">
+            <h2 class="font-semibold" style="font-size:var(--text-md);color:var(--text-primary);">风控事件</h2>
+            <span class="text-xs font-mono" style="color:var(--text-tertiary);">近24小时</span>
+          </div>
+
+          <div class="flex-1 overflow-auto" style="scrollbar-width:thin;">
+            <!-- Event 1: ERROR -->
+            <div class="event-row flex items-start gap-3">
+              <span class="severity-dot severity-dot-error" style="margin-top:5px;"></span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="font-mono text-xs" style="color:var(--text-tertiary);">14:32</span>
+                  <span class="text-xs font-semibold" style="color:var(--state-error);">计划已阻止</span>
+                </div>
+                <p class="text-xs" style="color:var(--text-secondary);">BTCUSDT 做多: 连续亏损达到上限</p>
+              </div>
+            </div>
+
+            <!-- Event 2: INFO -->
+            <div class="event-row flex items-start gap-3">
+              <span class="severity-dot severity-dot-info" style="margin-top:5px;"></span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="font-mono text-xs" style="color:var(--text-tertiary);">13:15</span>
+                  <span class="text-xs font-semibold" style="color:var(--state-info);">配置已激活</span>
+                </div>
+                <p class="text-xs" style="color:var(--text-secondary);">用户激活了 risk-v2</p>
+              </div>
+            </div>
+
+            <!-- Event 3: WARNING -->
+            <div class="event-row flex items-start gap-3">
+              <span class="severity-dot severity-dot-warning" style="margin-top:5px;"></span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="font-mono text-xs" style="color:var(--text-tertiary);">12:00</span>
+                  <span class="text-xs font-semibold" style="color:var(--state-warning);">紧急熔断已切换</span>
+                </div>
+                <p class="text-xs" style="color:var(--text-secondary);">紧急熔断已激活</p>
+              </div>
+            </div>
+
+            <!-- Event 4: SUCCESS -->
+            <div class="event-row flex items-start gap-3">
+              <span class="severity-dot severity-dot-success" style="margin-top:5px;"></span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-0.5">
+                  <span class="font-mono text-xs" style="color:var(--text-tertiary);">11:30</span>
+                  <span class="text-xs font-semibold" style="color:var(--state-success);">计划已允许</span>
+                </div>
+                <p class="text-xs" style="color:var(--text-secondary);">ETHUSDT 做空通过所有检查</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

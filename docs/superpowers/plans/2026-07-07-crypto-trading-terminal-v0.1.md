@@ -1825,7 +1825,7 @@ git commit -m "feat(config-versioning): add in-memory ConfigStore"
 - Create: `f:\crypto\apps\api\src\app\response.py`
 - Create: `f:\crypto\apps\api\src\app\exceptions.py`
 - Create: `f:\crypto\apps\api\src\app\main.py`
-- Create: 8 个 model 文件（见文件结构总览）
+- Create: 9 个实体 model 文件 + base.py + __init__.py = 11 个文件（见文件结构总览，其中 base.py 为 DeclarativeBase 基类、__init__.py 为导出聚合，实体 model 为 9 个：trade_plan / position_sizing_result / risk_check / decision_gate_result / config_version / system_event / user_settings / account_risk_state；v0.1 plan 文件结构总览列出 8 个实体 model + base.py，实际实现中 trade_journal 在后续迁移补入，此处以文件结构总览为准）
 - Create: `f:\crypto\apps\api\migrations\env.py`
 - Create: `f:\crypto\apps\api\migrations\script.py.mako`
 
@@ -1955,7 +1955,9 @@ class PlanStatusException(AppException):
         super().__init__("PLAN_STATUS_ERROR", f"计划 {plan_id} 状态 {current}，期望 {expected}", 409)
 ```
 
-- [ ] **Step 3: 创建 8 个 model 文件**
+- [ ] **Step 3: 创建 8 个实体 model 文件（+ base.py + __init__.py）**
+
+> 共 10 个文件：`base.py`（DeclarativeBase）+ `__init__.py`（导出聚合）+ 8 个实体 model（trade_plan / position_sizing_result / risk_check / decision_gate_result / config_version / system_event / user_settings / account_risk_state）。
 
 每个 model 文件遵循设计稿 §4.2 的字段定义。关键模板（trade_plan.py 为例）：
 

@@ -1,0 +1,182 @@
+/* AI Personal Crypto Trading Terminal — Brand Design Tokens */
+/* Dark professional trading terminal aesthetic */
+
+:root {
+  /* ── Color System ── */
+  /* Background layers */
+  --bg-base: #0a0b0e;
+  --bg-surface: #111318;
+  --bg-elevated: #1a1d25;
+  --bg-overlay: #21252f;
+  --bg-hover: #282d3a;
+
+  /* Primary: Emerald green — trust, growth, "go" signal */
+  --color-primary: #10b981;
+  --color-primary-hover: #34d399;
+  --color-primary-muted: rgba(16, 185, 129, 0.15);
+  --color-primary-border: rgba(16, 185, 129, 0.3);
+
+  /* State colors */
+  --state-success: #10b981;
+  --state-warning: #f59e0b;
+  --state-error: #ef4444;
+  --state-info: #3b82f6;
+  --state-success-muted: rgba(16, 185, 129, 0.12);
+  --state-warning-muted: rgba(245, 158, 11, 0.12);
+  --state-error-muted: rgba(239, 68, 68, 0.12);
+  --state-info-muted: rgba(59, 130, 246, 0.12);
+
+  /* Long/Short colors */
+  --color-long: #10b981;
+  --color-short: #ef4444;
+  --color-long-muted: rgba(16, 185, 129, 0.1);
+  --color-short-muted: rgba(239, 68, 68, 0.1);
+
+  /* Text hierarchy */
+  --text-primary: #e8eaed;
+  --text-secondary: #8b8fa3;
+  --text-tertiary: #565b6e;
+  --text-inverse: #0a0b0e;
+
+  /* Borders */
+  --border-default: #1e2230;
+  --border-subtle: #171a24;
+  --border-strong: #2a2f3e;
+
+  /* ── Typography ── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  --text-xs: 0.6875rem;   /* 11px */
+  --text-sm: 0.75rem;     /* 12px */
+  --text-base: 0.8125rem; /* 13px */
+  --text-md: 0.875rem;     /* 14px */
+  --text-lg: 1rem;         /* 16px */
+  --text-xl: 1.125rem;     /* 18px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 2rem;        /* 32px */
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Spacing ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Shape ── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-full: 9999px;
+
+  /* ── Surface & Depth ── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Dark mode is the default and only mode for this terminal ── */
+html.dark, html {
+  background: var(--bg-base);
+  color: var(--text-primary);
+}
+
+/* ── Typography Utilities ── */
+.font-mono { font-family: var(--font-mono); }
+.font-sans { font-family: var(--font-sans); }
+
+.text-mono-number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* ── Surface Utilities ── */
+.surface-base { background: var(--bg-base); }
+.surface-surface { background: var(--bg-surface); }
+.surface-elevated { background: var(--bg-elevated); }
+.surface-overlay { background: var(--bg-overlay); }
+
+/* ── Card Pattern ── */
+.card-terminal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+}
+.card-terminal-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+/* ── Status Indicator ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  display: inline-block;
+}
+.status-dot-success { background: var(--state-success); box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+.status-dot-warning { background: var(--state-warning); box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+.status-dot-error   { background: var(--state-error); box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+
+/* ── Badge / Tag ── */
+.badge-grade-a { background: var(--state-success-muted); color: var(--state-success); }
+.badge-grade-b { background: var(--state-info-muted); color: var(--state-info); }
+.badge-grade-c { background: var(--state-warning-muted); color: var(--state-warning); }
+.badge-blocked  { background: var(--state-error-muted); color: var(--state-error); }
+.badge-long     { background: var(--color-long-muted); color: var(--color-long); }
+.badge-short    { background: var(--color-short-muted); color: var(--color-short); }
+
+/* ── Button ── */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--text-inverse);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: background 150ms ease;
+}
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  transition: all 150ms ease;
+}
+.btn-ghost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.btn-danger {
+  background: var(--state-error-muted);
+  color: var(--state-error);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}

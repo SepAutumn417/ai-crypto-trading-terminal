@@ -35,18 +35,22 @@
 | `EXECUTION_DESIGN.md` | L4确认执行系统设计 |
 | `ORDER_LIFECYCLE.md` | 订单生命周期与状态机 |
 | `EXCHANGE_INTEGRATION.md` | 交易所接入设计，以Bitget为第一交易所 |
-| `EXECUTION_SAFETY.md` | 执行安全、Kill Switch、Dry Run、安全限制 |
+| `EXECUTION_SAFETY.md` | 执行安全、Dry Run、安全限制（Kill Switch 引用 KILL_SWITCH.md） |
+| `KILL_SWITCH.md` | Kill Switch 单一事实源（触发条件、极性、解除） |
 | `RISK_RULES.md` | 通用风控规则 |
-| `AI_GUARDRAILS.md` | AI边界与结构化输出规范 |
+| `AI_GUARDRAILS.md` | AI边界与结构化输出规范（含 DecisionGate 合并矩阵） |
 | `CONFIG_VERSIONING.md` | 配置版本管理 |
 | `EVENT_LOG_DESIGN.md` | 事件日志与审计设计 |
-| `DATABASE.md` | 数据库设计初稿 |
-| `API.md` | 后端API设计初稿 |
+| `DATABASE.md` | 数据库设计（含全部 19 张表 DDL、索引、精度规范） |
+| `API.md` | 后端API设计（含分页/幂等/限流/错误码） |
+| `WEBSOCKET_API.md` | WebSocket API 设计（行情/订单/持仓/系统状态推送） |
+| `AUTH.md` | 终端鉴权设计（单用户口令/Session/二次确认/IP 白名单） |
+| `ERROR_CODES.md` | 错误码总表（按模块分组） |
 | `FRONTEND_PAGES.md` | 前端页面与交互规划 |
 | `DEVELOPMENT.md` | 开发路线图 |
 | `MVP_ACCEPTANCE.md` | 各版本验收标准 |
 | `TESTING.md` | 测试方案 |
-| `SECURITY.md` | 密钥、权限、数据安全 |
+| `SECURITY.md` | 密钥、权限、数据安全（含 API Key 加密方案） |
 | `DEPLOYMENT.md` | 部署方案 |
 | `OPERATIONS.md` | 运维、备份、监控、故障处理 |
 | `USER_TRADING_CONFIG.template.md` | 个人交易配置模板，和系统设计分离 |
@@ -71,11 +75,14 @@
 
 ## 推荐开发顺序
 
+> 版本号与范围以 `DEVELOPMENT.md §3` 与 `MVP_ACCEPTANCE.md` 为唯一事实源。
+
 1. `v0.1`：交易计划 + 动态仓位计算 + 风控检查。
-2. `v0.2`：行情接入 + K线展示 + 市场结构识别。
-3. `v0.3`：自动候选计划生成。
-4. `v0.4`：AI实时评估与机会雷达。
-5. `v0.5`：订单预览 + Dry Run。
-6. `v0.6`：只读实盘同步。
-7. `v0.7`：L4小额确认执行。
-8. `v1.0`：完整L4个人交易终端。
+2. `v0.2`：行情接入 + K线展示。
+3. `v0.3`：市场结构识别。
+4. `v0.4`：自动候选计划生成。
+5. `v0.5`：AI 评估与解释。
+6. `v0.6`：订单预览 + Dry Run。
+7. `v0.7`：只读实盘同步。
+8. `v0.8`：小额 L4 确认执行。
+9. `v1.0`：完整 L4 个人交易终端。

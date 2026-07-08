@@ -153,12 +153,15 @@ REVIEWED
 
 止盈止损设置失败。
 
+> 此规则与 `EXECUTION_SAFETY.md §8`、`OPERATIONS.md §3.3` 保持一致：**止损设置失败 → 立即触发 Kill Switch（`kill_switch = true`）+ 记录 CRITICAL 事件 + 禁止新单 + 提供补设止损 UI**。
+
 处理：
 
-- 标记严重事件；
+- 立即触发 Kill Switch（`kill_switch = true`）；
+- 记录 CRITICAL 级别 `system_events`；
 - 禁止新单；
 - 提示用户人工检查持仓；
-- 可提供一键补设止损确认。
+- 提供一键补设止损确认 UI。
 
 ---
 

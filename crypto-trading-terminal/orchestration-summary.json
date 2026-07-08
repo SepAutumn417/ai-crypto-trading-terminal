@@ -1,0 +1,274 @@
+{
+  "project": {
+    "name": "AI 交易终端",
+    "path": "f:\\crypto\\crypto-trading-terminal",
+    "operation": "create",
+    "deviceType": "desktop",
+    "language": "zh-CN",
+    "dashboardMode": true,
+    "replicationMode": null,
+    "sourceUrl": null,
+    "visualSpecExcerpt": null,
+    "styleDefinitionBrief": "Crypto trading terminal, dark mode, emerald green primary, mono numbers, high data density, command-center aesthetic with status indicators and risk signals",
+    "designRead": "Dashboard / crypto trader / industrial utilitarian / high density / avoid purple neon and generic card walls",
+    "designDials": {
+      "layoutVariance": 1,
+      "motionIntensity": 1,
+      "visualDensity": 5
+    },
+    "styleContinuityAnchors": {
+      "colorSystem": {
+        "primaryColorRole": "emerald green for go/success/primary actions",
+        "brandHuePolicy": "single primary hue (emerald); long=green, short=red for direction; state colors for semantic status only",
+        "stateColors": "success=green, warning=amber, error=red, info=blue"
+      },
+      "shapeSystem": "radius sm=4px, md=6px, lg=8px; sharp utilitarian cards with subtle borders, no soft/rounded shapes",
+      "typographySystem": "Inter for UI labels, JetBrains Mono for all numbers/prices/data values; tabular-nums on all numeric displays; tight tracking on mono numbers",
+      "spacingSystem": "compact spacing (4px base); tight padding on cards and controls; high information density",
+      "componentLanguage": "thin-bordered cards on dark surface layers; status dots with glow; badge-style grade/direction tags; ghost buttons for secondary actions",
+      "surfaceAndDepth": "border-first depth model; 4 background layers from #0a0b0e to #21252f; static surfaces use borders not shadows; only floating layers (modal/dropdown) use shadow-lg",
+      "imageryAndIconography": "no decorative images; all visuals are data-driven (charts, status indicators, sparklines); icon-only for navigation",
+      "interactionTone": "precise, minimal feedback; hover reveals subtle bg change; no animations on data displays; status changes are instant color shifts"
+    },
+    "specsConstraints": null,
+    "sharedProjectShellContract": {
+      "navigationShell": "left sidebar navigation with icon+label, active state via emerald green highlight; top-right status bar with Kill Switch indicator and Execution Mode toggle",
+      "primaryColorSystem": "emerald green (#10b981) for primary actions, success states, and active nav; red (#ef4444) for short/danger/error",
+      "typographySystem": "Inter for all text; JetBrains Mono for numbers, prices, amounts; tabular-nums on all numeric data; sizes: xs=11, sm=12, base=13, md=14, lg=16",
+      "radiusScale": "sm=4px (buttons, badges), md=6px (cards, inputs), lg=8px (panels, modals)",
+      "surfaceDepthModel": "4-layer bg: base #0a0b0e, surface #111318, elevated #1a1d25, overlay #21252f; cards use surface bg + 1px border-default; no shadow on static cards",
+      "ctaStyle": "btn-primary: emerald bg, dark text, sm radius, sm font; btn-ghost: transparent, border, secondary text; btn-danger: red muted bg, red text",
+      "alignmentRules": "compact padding (12-16px inside cards); 8px gap between grid cards; consistent 24px section spacing; left-aligned labels, right-aligned numbers"
+    },
+    "generationTree": {
+      "root": {
+        "nodeId": "gen-project-shell",
+        "kind": "project-shell",
+        "pageIds": ["page-dashboard", "page-trade-plans", "page-risk-center"],
+        "output": "partials/project-shell.html",
+        "sharedRegions": ["sidebar-navigation", "top-status-bar", "root-frame"],
+        "privateRegions": [],
+        "mutableSlots": ["activeNavItem", "pageTitle"],
+        "status": "planned",
+        "children": [
+          {
+            "nodeId": "gen-page-dashboard",
+            "kind": "page-leaf",
+            "pageIds": ["page-dashboard"],
+            "output": "pages/dashboard.html",
+            "sharedRegions": [],
+            "privateRegions": ["dashboard main content area with KPI cards, positions table, opportunity summary, AI market summary"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-trade-plans",
+            "kind": "page-leaf",
+            "pageIds": ["page-trade-plans"],
+            "output": "pages/trade-plans.html",
+            "sharedRegions": [],
+            "privateRegions": ["trade plans main content with plan list, create form, plan detail"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          },
+          {
+            "nodeId": "gen-page-risk-center",
+            "kind": "page-leaf",
+            "pageIds": ["page-risk-center"],
+            "output": "pages/risk-center.html",
+            "sharedRegions": [],
+            "privateRegions": ["risk center main content with risk status, config management, kill switch, event log"],
+            "mutableSlots": ["activeNavItem", "pageTitle"],
+            "status": "planned",
+            "children": []
+          }
+        ]
+      }
+    }
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "libraryIdentity": null,
+    "libraryPath": null,
+    "cssFilePath": "f:\\crypto\\crypto-trading-terminal\\colors_and_type.css",
+    "brandPrefix": "",
+    "themeMode": "dark",
+    "designDecisionSummary": "Dark crypto terminal with emerald green primary, JetBrains Mono for data, Inter for UI, compact 4-layer surface system, border-first depth",
+    "componentContractKind": null,
+    "forbiddenInventedComponents": [],
+    "allowedComponents": [],
+    "styleConstraints": {
+      "radiusMax": 8,
+      "spacingBase": 4,
+      "fontSizeBody": 13,
+      "fontSizeMin": 11,
+      "controlHeightDefault": 32,
+      "controlHeightLarge": 38
+    },
+    "productContext": {
+      "kitType": null,
+      "productType": "Personal crypto trading terminal / dashboard"
+    },
+    "actualTokenNameReference": [
+      { "semanticPurpose": "Base background", "tokenName": "--bg-base" },
+      { "semanticPurpose": "Card/surface background", "tokenName": "--bg-surface" },
+      { "semanticPurpose": "Elevated panel background", "tokenName": "--bg-elevated" },
+      { "semanticPurpose": "Primary action color", "tokenName": "--color-primary" },
+      { "semanticPurpose": "Primary text", "tokenName": "--text-primary" },
+      { "semanticPurpose": "Secondary text", "tokenName": "--text-secondary" },
+      { "semanticPurpose": "Long/buy color", "tokenName": "--color-long" },
+      { "semanticPurpose": "Short/sell color", "tokenName": "--color-short" },
+      { "semanticPurpose": "Default border", "tokenName": "--border-default" },
+      { "semanticPurpose": "Success state", "tokenName": "--state-success" },
+      { "semanticPurpose": "Warning state", "tokenName": "--state-warning" },
+      { "semanticPurpose": "Error state", "tokenName": "--state-error" },
+      { "semanticPurpose": "Info state", "tokenName": "--state-info" }
+    ]
+  },
+  "pages": [
+    {
+      "nodeId": "page-dashboard",
+      "slug": "dashboard",
+      "title": "Dashboard",
+      "htmlSrc": "pages/dashboard.html",
+      "pageIndex": 1,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "System overview: account equity, PnL, risk status, active positions, candidate opportunities, AI summary",
+      "visualNorthStar": "Mission control dashboard: a grid of compact data panels with glowing status indicators, tabular numbers in mono font, and emerald/red color coding for positive/negative values",
+      "compositionPattern": "Dashboard Grid: top KPI row (4 metric cards) + 2-column body (positions table left, opportunity + AI summary right)",
+      "continuityAnchors": ["sidebar nav with emerald active state", "mono numbers for all financial data", "border-first card panels", "status dots with glow"],
+      "libraryRestraintMode": false,
+      "uiKitPath": null,
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": true,
+      "miniProgramStyle": false,
+      "qualityRisks": ["high data density must remain scannable", "mono font alignment on numbers"],
+      "generationNodeId": "gen-page-dashboard",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["dashboard main content area with KPI cards, positions table, opportunity summary, AI market summary"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    },
+    {
+      "nodeId": "page-trade-plans",
+      "slug": "trade-plans",
+      "title": "Trade Plans",
+      "htmlSrc": "pages/trade-plans.html",
+      "pageIndex": 2,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "Trade plan management: create plans with entry/stop/TP, run risk checks, view sizing results, manage plan lifecycle",
+      "visualNorthStar": "Split-panel trading workstation: left panel is a dense sortable plan list with grade badges and status tags, right panel switches between create form and plan detail with sizing/risk/decision result cards",
+      "compositionPattern": "Split-panel: 1/3 left list + 2/3 right detail/form, no hero, all functional panels",
+      "continuityAnchors": ["sidebar nav with emerald active state", "mono numbers for prices/sizing", "grade badges (A/B/C/Blocked)", "border-first card panels"],
+      "libraryRestraintMode": false,
+      "uiKitPath": null,
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": ["form field density must remain usable", "sizing result cards need clear visual hierarchy"],
+      "generationNodeId": "gen-page-trade-plans",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["trade plans main content with plan list, create form, plan detail"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    },
+    {
+      "nodeId": "page-risk-center",
+      "slug": "risk-center",
+      "title": "Risk Center",
+      "htmlSrc": "pages/risk-center.html",
+      "pageIndex": 3,
+      "stateGroupId": null,
+      "stateRole": null,
+      "baseStatePageId": null,
+      "sharedShellContract": [],
+      "mutableRegions": [],
+      "derivedFromHtmlSrc": null,
+      "derivationType": "original",
+      "sourcePageId": null,
+      "sourceHtmlSrc": null,
+      "pageType": "information-dense",
+      "businessScenario": "Risk control center: risk configuration, account risk state, Kill Switch, Execution Mode, risk intercept events, config version management",
+      "visualNorthStar": "Red-amber-graded risk command center: prominent Kill Switch toggle with red glow when active, risk gauges, config version timeline, and a scrollable event log with severity-coded rows",
+      "compositionPattern": "Top risk status summary row + 2-column body (config management left, event log right), prominent Kill Switch card at top",
+      "continuityAnchors": ["sidebar nav with emerald active state", "Kill Switch red glow indicator", "mono numbers for risk metrics", "severity-coded event rows"],
+      "libraryRestraintMode": false,
+      "uiKitPath": null,
+      "componentPlan": [],
+      "imagePlan": [],
+      "chartsRequired": false,
+      "miniProgramStyle": false,
+      "qualityRisks": ["Kill Switch must be visually prominent", "config version table must be scannable"],
+      "generationNodeId": "gen-page-risk-center",
+      "generationPath": ["gen-project-shell"],
+      "inheritedFragments": ["partials/project-shell.html"],
+      "privateRegions": ["risk center main content with risk status, config management, kill switch, event log"],
+      "mutableSlots": ["activeNavItem", "pageTitle"]
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [
+    {
+      "sourceNodeId": "page-dashboard",
+      "domId": "nav-trade-plans",
+      "targetPageId": "page-trade-plans"
+    },
+    {
+      "sourceNodeId": "page-trade-plans",
+      "domId": "nav-risk-center",
+      "targetPageId": "page-risk-center"
+    }
+  ],
+  "hiddenInteractionPlan": [
+    {
+      "sourceNodeId": "page-dashboard",
+      "domId": "nav-risk-center",
+      "targetPageId": "page-risk-center",
+      "hideEdge": true,
+      "reason": "shortcut navigation"
+    },
+    {
+      "sourceNodeId": "page-trade-plans",
+      "domId": "nav-dashboard",
+      "targetPageId": "page-dashboard",
+      "hideEdge": true,
+      "reason": "back navigation"
+    },
+    {
+      "sourceNodeId": "page-risk-center",
+      "domId": "nav-dashboard",
+      "targetPageId": "page-dashboard",
+      "hideEdge": true,
+      "reason": "back navigation"
+    },
+    {
+      "sourceNodeId": "page-risk-center",
+      "domId": "nav-trade-plans",
+      "targetPageId": "page-trade-plans",
+      "hideEdge": true,
+      "reason": "shortcut navigation"
+    }
+  ]
+}

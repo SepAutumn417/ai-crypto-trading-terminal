@@ -182,6 +182,8 @@ packages/
 
 ### 输出
 
+> RiskEngine 只输出 4 种状态：`ALLOW / WARN / REDUCE_RISK / BLOCK`。`ALLOW_CONFIRM / WAIT / EXPIRED` 属于 DecisionGate（§10）的输出，不属于 RiskEngine。详见 `RISK_RULES.md §4` 与 `RISK_RULES.md §7`。
+
 ```json
 {
   "status": "ALLOW | WARN | REDUCE_RISK | BLOCK",

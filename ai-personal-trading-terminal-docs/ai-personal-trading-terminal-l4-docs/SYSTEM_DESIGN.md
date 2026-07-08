@@ -2,34 +2,51 @@
 
 ## 1. 总体架构
 
+> 分层视图对齐 `MODULES.md §1` 的 13 个 packages。表现层 → API 编排层 → 领域纯逻辑层 → 适配层 → 基础设施。
+
 ```text
-┌─────────────────────────────────────────────┐
-│                 Web Terminal                 │
-│ Dashboard / Radar / Chart / Plans / Review   │
-└───────────────────────┬─────────────────────┘
-                        │
-┌───────────────────────▼─────────────────────┐
-│                    API Server                │
-│ Auth / Config / Plans / Risk / AI / Execute  │
-└───────────────────────┬─────────────────────┘
-                        │
-        ┌───────────────┼────────────────┐
-        │               │                │
-┌───────▼───────┐ ┌─────▼─────┐ ┌────────▼────────┐
-│ Market Data   │ │ Risk      │ │ Execution       │
-│ Service       │ │ Engine    │ │ Engine          │
-└───────┬───────┘ └─────┬─────┘ └────────┬────────┘
-        │               │                │
-┌───────▼───────┐ ┌─────▼─────┐ ┌────────▼────────┐
-│ Structure     │ │ Decision  │ │ Exchange Adapter│
-│ Engine        │ │ Gate      │ │ Bitget First    │
-└───────┬───────┘ └─────┬─────┘ └────────┬────────┘
-        │               │                │
-┌───────▼───────────────▼────────────────▼─────┐
-│                 PostgreSQL / Redis            │
-│ Candles / Plans / Orders / Events / Snapshots │
-└───────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                      表现层 (apps/web)                       │
+│  Dashboard / Radar / Chart / Plans / Risk / Journal / Review │
+└───────────────────────────────┬─────────────────────────────┘
+                                │  REST + WebSocket
+┌───────────────────────────────▼─────────────────────────────┐
+│                  API 编排层 (apps/api)                       │
+│  Auth / Config / Plans / Risk / AI / Execute / System        │
+│  services: plan / config / execution / journal / market      │
+└───────────────────────────────┬─────────────────────────────┘
+                                │
+        ┌───────────┬───────────┼───────────┬────────────┐
+        │           │           │           │            │
+┌───────▼──────┐ ┌──▼────────┐ ┌▼──────────┐ ┌▼─────────┐ ┌▼────────────┐
+│ market-data  │ │ market-   │ │auto-plan-  │ │ position- │ │ ai-         │
+│              │ │ structure │ │ engine     │ │ sizing    │ │ evaluator   │
+└──────┬───────┘ └──┬────────┘ └──┬─────────┘ └──┬───────┘ └──┬──────────┘
+       │            │             │              │            │
+       │     ┌──────▼──────┐ ┌────▼────────┐ ┌───▼──────┐ ┌───▼──────┐
+       │     │ risk-engine │ │decision-gate│ │ journal  │ │ review   │
+       │     └──────┬──────┘ └─────┬───────┘ └────┬─────┘ └────┬─────┘
+       │            │              │              │            │
+┌──────▼────────────▼──────────────▼──────────────▼────────────▼─────────┐
+│                       领域纯逻辑层 (packages/*)                          │
+│  shared / position-sizing / risk-engine / decision-gate /                │
+│  config-versioning / event-log / market-data / market-structure /        │
+│  auto-plan-engine / ai-evaluator / journal / review                      │
+└───────────────────────────────┬─────────────────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────┐
+│                     适配层 (exchange-adapters)               │
+│              BitgetAdapter (first) / MockExchange            │
+└───────────────────────────────┬─────────────────────────────┘
+                                │
+┌───────────────────────────────▼─────────────────────────────┐
+│                       基础设施                               │
+│        PostgreSQL 16 / Redis / Docker Compose                │
+│  Candles / Plans / Orders / Events / Snapshots / Configs     │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+> 说明：领域纯逻辑层中的 `risk-engine / position-sizing / decision-gate` 为无 IO 纯函数包，可独立单测；`market-data / market-structure / auto-plan-engine / ai-evaluator / journal / review / config-versioning / event-log` 为有状态/有 IO 的领域包；`exchange-adapters` 屏蔽交易所 API 差异。
 
 ---
 
