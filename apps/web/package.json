@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "generate-types": "openapi-typescript openapi.json -o lib/api-types.ts"
   },
   "dependencies": {
     "next": "14.2.5",
@@ -27,6 +28,7 @@
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.5"
+    "eslint-config-next": "14.2.5",
+    "openapi-typescript": "^7.0.0"
   }
 }

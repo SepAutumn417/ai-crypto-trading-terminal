@@ -1,3 +1,20 @@
+// 自动生成的类型（由 openapi-typescript 从 FastAPI OpenAPI schema 生成）
+// 运行 `pnpm --filter web generate-types` 重新生成（需先 `python scripts/export_openapi.py`）
+import type { components } from './api-types';
+
+type Schema = components['schemas'];
+
+// 枚举类型直接使用生成类型（单一数据源）
+export type Direction = Schema['Direction'];
+export type EvaluationGrade = Schema['EvaluationGrade'];
+export type SignalType = Schema['SignalType'];
+export type KlineInterval = Schema['KlineInterval'];
+export type OpportunityGrade = Schema['OpportunityGrade'];
+
+// AI 评估相关类型已与生成类型完全匹配，直接复用
+export type AIIndicatorSignal = Schema['IndicatorResult'];
+export type AIEvaluationResult = Schema['AIEvaluationResult'];
+
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export interface ApiResponse<T> {
@@ -55,14 +72,14 @@ export interface TradePlan {
   id: string;
   exchange: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: Direction;
   entry_price: string;
   stop_loss_price: string | null;
   take_profit_prices: string[];
   leverage: string;
   margin_mode: string;
   risk_percent: string;
-  opportunity_grade: 'A' | 'B' | 'C' | 'BLOCKED';
+  opportunity_grade: OpportunityGrade;
   equity: string;
   setup_type: string | null;
   notes: string | null;
@@ -86,13 +103,13 @@ export interface TradePlan {
 export interface PlanCreate {
   exchange?: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: Direction;
   entry_price: string;
   stop_loss_price?: string | null;
   take_profit_prices: string[];
   leverage: string;
   risk_percent: string;
-  opportunity_grade: 'A' | 'B' | 'C' | 'BLOCKED';
+  opportunity_grade: OpportunityGrade;
   equity: string;
   setup_type?: string | null;
   margin_mode?: string;
@@ -182,14 +199,12 @@ export interface Orderbook {
   timestamp: string | null;
 }
 
-export type KlineInterval = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '6h' | '12h' | '1d' | '1w';
-
 export interface TradeJournal {
   id: string;
   trade_plan_id: string | null;
   exchange: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: Direction;
   entry_price: string;
   exit_price: string | null;
   quantity: string;
@@ -212,7 +227,7 @@ export interface TradeJournalCreate {
   trade_plan_id?: string | null;
   exchange?: string;
   symbol: string;
-  direction: 'LONG' | 'SHORT';
+  direction: Direction;
   entry_price: string;
   exit_price?: string | null;
   quantity: string;
@@ -238,27 +253,6 @@ export interface TradeJournalSummary {
   avg_pnl: string | null;
   best_trade: string | null;
   worst_trade: string | null;
-}
-
-export interface AIIndicatorSignal {
-  name: string;
-  value: string | null;
-  signal: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell';
-  weight: string;
-  score: string;
-  explanation: string;
-}
-
-export interface AIEvaluationResult {
-  symbol: string;
-  direction: string;
-  overall_score: string;
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
-  recommendation: string;
-  signals: AIIndicatorSignal[];
-  summary: string;
-  risk_level: string;
-  conviction: string;
 }
 
 export const api = {
@@ -323,7 +317,7 @@ export const api = {
     request<TradeJournalSummary>(`/api/journals/summary${symbol ? `?symbol=${symbol}` : ''}`),
   evaluateOpportunity: (params: {
     symbol: string;
-    direction: 'LONG' | 'SHORT';
+    direction: Direction;
     entry_price: string;
     interval?: KlineInterval;
     limit?: number;
