@@ -1,5 +1,7 @@
 # AI Personal Trading Terminal L4
 
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue?logo=github)
+
 v0.1：交易计划 + 仓位计算 + 风控 + 决策门。
 
 ## 架构
@@ -106,14 +108,21 @@ uv run pytest packages/ -v
 - [x] 部分唯一索引：每配置类型只能有一个激活版本
 - [x] Seed 数据：risk-v1 / execution-v1 / opportunity_grade-v1 / symbol_rules-v1（BTC/ETH/SOL）
 
-## v0.2 范围（待实现）
+## 版本路线（对齐 DEVELOPMENT.md / MVP_ACCEPTANCE.md）
 
-- 行情数据接入（K 线、订单簿）
-- Bitget 交易所适配器
-- 真实订单提交
-- AI 评估（机会评分）
-- 用户确认流（UI 弹窗）
-- 交易日志（journal）
+| 版本 | 范围 | 状态 |
+|------|------|------|
+| v0.1 | 交易计划 + 仓位计算 + 风控 + 决策门 + 配置版本管理 | ✅ 已交付 |
+| v0.2 | 行情接入与 K 线图表（Bitget REST K 线、K 线入库、K 线图展示、切换标的/周期） | 🚧 待实现 |
+| v0.3 | 市场结构识别（Swing High/Low、趋势/震荡、BOS/CHOCH、支撑压力区） | ⏳ |
+| v0.4 | 自动候选计划生成（Opportunity Radar、候选计划状态机、机会评级） | ⏳ |
+| v0.5 | AI 评估与解释（结构解释、计划质量分析、风险解释、结构化输出） | ⏳ |
+| v0.6 | 订单预览与 Dry Run（Order Intent、Order Preview、执行日志，不做真实下单） | ⏳ |
+| v0.7 | 只读实盘同步（读取账户权益/持仓/订单/成交、持仓监控、自动日志草稿） | ⏳ |
+| v0.8 | 小额 L4 确认执行（启用交易 Key、用户确认后提交限价单、设置止损止盈、订单状态同步、Kill Switch、错误处理） | ⏳ |
+| v1.0 | 完整 L4 个人交易终端（Dashboard、Opportunity Radar、Chart Workspace、Journal、Review 等全部页面） | ⏳ |
+
+> **注意**：各版本范围以 `DEVELOPMENT.md §3` 与 `MVP_ACCEPTANCE.md` 为唯一事实源。Bitget 适配器实盘、真实订单提交、AI 评估、用户确认流、交易日志分别归入 v0.7/v0.8/v0.5/v0.8/v1.0，不在 v0.2 范围内。
 
 ## 设计文档
 
