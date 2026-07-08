@@ -2,7 +2,7 @@ import pytest
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 
-from ai_evaluator import evaluate_trade, EvaluationGrade, SignalType
+from ai_evaluator import evaluate_trade, EvaluationGrade, SignalType, DEFAULT_WEIGHTS
 from exchange_adapter import Kline, KlineInterval
 
 
@@ -110,3 +110,58 @@ def test_evaluate_trade_risk_level():
     klines = generate_klines(100, Decimal("65000"))
     result = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines)
     assert result.risk_level in ["低", "中低", "中等", "中高", "高"]
+
+
+def test_evaluate_trade_with_custom_weights_overrides_defaults():
+    """自定义权重应覆盖默认权重体现在 signal.weight 上"""
+    klines = generate_klines(100, Decimal("65000"), trend="up")
+    weights = {
+        "rsi": Decimal("3"),
+        "macd": Decimal("2"),
+        "bollinger": Decimal("2"),
+        "trend": Decimal("2"),
+        "volume": Decimal("2"),
+    }
+    result = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines, weights=weights)
+    signal_by_name = {s.name: s for s in result.signals}
+    assert signal_by_name["RSI(14)"].weight == Decimal("3")
+    assert signal_by_name["MACD(12,26,9)"].weight == Decimal("2")
+    assert signal_by_name["Bollinger Bands(20,2)"].weight == Decimal("2")
+    assert signal_by_name["Trend (SMA20/SMA50)"].weight == Decimal("2")
+    assert signal_by_name["Volume"].weight == Decimal("2")
+
+
+def test_evaluate_trade_with_partial_weights_uses_defaults_for_missing():
+    """只传入部分权重，缺失的应使用默认值"""
+    klines = generate_klines(100, Decimal("65000"), trend="up")
+    weights = {"rsi": Decimal("5")}  # 只传 rsi
+    result = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines, weights=weights)
+    signal_by_name = {s.name: s for s in result.signals}
+    assert signal_by_name["RSI(14)"].weight == Decimal("5")
+    assert signal_by_name["MACD(12,26,9)"].weight == DEFAULT_WEIGHTS["macd"]
+    assert signal_by_name["Bollinger Bands(20,2)"].weight == DEFAULT_WEIGHTS["bollinger"]
+    assert signal_by_name["Trend (SMA20/SMA50)"].weight == DEFAULT_WEIGHTS["trend"]
+    assert signal_by_name["Volume"].weight == DEFAULT_WEIGHTS["volume"]
+
+
+def test_evaluate_trade_with_none_weights_uses_defaults():
+    """weights=None 应使用默认权重，与不传一致"""
+    klines = generate_klines(100, Decimal("65000"))
+    result_none = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines, weights=None)
+    result_default = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines)
+    assert result_none.overall_score == result_default.overall_score
+    signal_by_name = {s.name: s for s in result_none.signals}
+    assert signal_by_name["RSI(14)"].weight == DEFAULT_WEIGHTS["rsi"]
+    assert signal_by_name["MACD(12,26,9)"].weight == DEFAULT_WEIGHTS["macd"]
+
+
+def test_evaluate_trade_weights_affect_overall_score():
+    """不同权重应导致不同的 overall_score"""
+    klines = generate_klines(100, Decimal("65000"), trend="up")
+    result_default = evaluate_trade("BTCUSDT", "LONG", Decimal("65000"), klines)
+    # 极端放大 trend 权重（上升趋势中 trend 得分较高）
+    result_trend_heavy = evaluate_trade(
+        "BTCUSDT", "LONG", Decimal("65000"), klines,
+        weights={"trend": Decimal("100")},
+    )
+    assert result_default.overall_score != result_trend_heavy.overall_score

@@ -86,6 +86,23 @@ async def get_active_opportunity_grade_config(db: AsyncSession) -> tuple[Opportu
     )
 
 
+async def get_ai_indicator_weights(db: AsyncSession) -> dict[str, Decimal]:
+    """从 active opportunity_grade 配置 payload 中读取可选的 ai_weights 子字段。
+
+    payload 结构示例：
+      {"A": {...}, "B": {...}, ..., "ai_weights": {"rsi": 1.5, "macd": 1.5, ...}}
+
+    配置不存在或无 ai_weights 字段时返回空 dict，调用方据此回退到默认权重。
+    """
+    try:
+        version = await _get_active(db, ConfigType.OPPORTUNITY_GRADE.value)
+    except LookupError:
+        return {}
+    p = _get_payload(version)
+    raw = p.get("ai_weights") or {}
+    return {k: _parse_decimal(v) for k, v in raw.items()}
+
+
 async def get_active_symbol_rules(db: AsyncSession) -> tuple[SymbolRules, str]:
     version = await _get_active(db, ConfigType.SYMBOL_RULES.value)
     p = _get_payload(version)

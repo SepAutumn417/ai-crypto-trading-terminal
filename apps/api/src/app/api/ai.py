@@ -1,10 +1,17 @@
+import logging
 from decimal import Decimal
-from fastapi import APIRouter, Query
-from exchange_adapter import KlineInterval, MockExchange
 
+from fastapi import APIRouter, Depends, Query
+from exchange_adapter import KlineInterval, MockExchange
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db import get_db
 from app.response import ApiResponse
+from app.services.config_service import get_ai_indicator_weights
 from ai_evaluator import evaluate_trade, AIEvaluationResult
 from shared.enums import Direction
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
@@ -16,10 +23,17 @@ async def evaluate_opportunity(
     entry_price: Decimal = Query(..., description="入场价格"),
     interval: KlineInterval = Query(default=KlineInterval.ONE_HOUR, description="K线周期"),
     limit: int = Query(default=100, ge=50, le=500, description="K线数量"),
+    db: AsyncSession = Depends(get_db),
 ) -> ApiResponse[AIEvaluationResult]:
     exchange = MockExchange()
     klines = await exchange.get_klines(symbol, interval, limit=limit)
 
-    result = evaluate_trade(symbol, direction.value, entry_price, klines, interval)
+    weights = await get_ai_indicator_weights(db)
+    if weights:
+        logger.info("AI 评估使用配置权重: %s", weights)
+    else:
+        logger.info("AI 评估未读取到配置权重，使用默认权重")
+
+    result = evaluate_trade(symbol, direction.value, entry_price, klines, interval, weights=weights or None)
 
     return ApiResponse.ok(result)

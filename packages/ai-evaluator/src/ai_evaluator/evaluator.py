@@ -17,6 +17,15 @@ from .indicators import (
     get_closes,
 )
 
+# 指标权重默认值；可被 evaluate_trade(weights=...) 覆盖
+DEFAULT_WEIGHTS: dict[str, Decimal] = {
+    "rsi": Decimal("1.5"),
+    "macd": Decimal("1.5"),
+    "bollinger": Decimal("1"),
+    "trend": Decimal("1.2"),
+    "volume": Decimal("0.8"),
+}
+
 
 def _score_to_signal(score: Decimal) -> SignalType:
     if score >= Decimal("80"):
@@ -31,19 +40,18 @@ def _score_to_signal(score: Decimal) -> SignalType:
         return SignalType.STRONG_SELL
 
 
-def _evaluate_rsi(closes: List[Decimal], direction: str) -> IndicatorResult:
+def _evaluate_rsi(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["rsi"]) -> IndicatorResult:
     rsi_values = rsi(closes, 14)
     if not rsi_values:
         return IndicatorResult(
             name="RSI(14)",
             signal=SignalType.NEUTRAL,
-            weight=Decimal("1"),
+            weight=weight,
             score=Decimal("50"),
             explanation="数据不足，无法计算 RSI",
         )
 
     current_rsi = rsi_values[-1]
-    weight = Decimal("1.5")
 
     if direction == "LONG":
         if current_rsi < Decimal("30"):
@@ -88,20 +96,19 @@ def _evaluate_rsi(closes: List[Decimal], direction: str) -> IndicatorResult:
     )
 
 
-def _evaluate_macd(closes: List[Decimal], direction: str) -> IndicatorResult:
+def _evaluate_macd(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["macd"]) -> IndicatorResult:
     macd_line, signal_line, hist = macd(closes, 12, 26, 9)
     if not hist or len(hist) < 2:
         return IndicatorResult(
             name="MACD",
             signal=SignalType.NEUTRAL,
-            weight=Decimal("1"),
+            weight=weight,
             score=Decimal("50"),
             explanation="数据不足，无法计算 MACD",
         )
 
     current_hist = hist[-1]
     prev_hist = hist[-2]
-    weight = Decimal("1.5")
 
     macd_above_signal = macd_line[-1] > signal_line[-1] if macd_line and signal_line else False
     histogram_increasing = current_hist > prev_hist
@@ -150,13 +157,13 @@ def _evaluate_macd(closes: List[Decimal], direction: str) -> IndicatorResult:
     )
 
 
-def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: str) -> IndicatorResult:
+def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["bollinger"]) -> IndicatorResult:
     upper, middle, lower = bollinger_bands(closes, 20, Decimal("2"))
     if not upper:
         return IndicatorResult(
             name="Bollinger Bands",
             signal=SignalType.NEUTRAL,
-            weight=Decimal("1"),
+            weight=weight,
             score=Decimal("50"),
             explanation="数据不足，无法计算布林带",
         )
@@ -166,7 +173,6 @@ def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: s
     current_middle = middle[-1]
     current_lower = lower[-1]
     band_width = current_upper - current_lower
-    weight = Decimal("1")
 
     position_pct = (current_price - current_lower) / band_width * Decimal("100") if band_width > 0 else Decimal("50")
 
@@ -213,7 +219,7 @@ def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: s
     )
 
 
-def _evaluate_trend(closes: List[Decimal], direction: str) -> IndicatorResult:
+def _evaluate_trend(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["trend"]) -> IndicatorResult:
     sma_20 = sma(closes, 20)
     sma_50 = sma(closes, 50)
 
@@ -221,7 +227,7 @@ def _evaluate_trend(closes: List[Decimal], direction: str) -> IndicatorResult:
         return IndicatorResult(
             name="Trend (SMA)",
             signal=SignalType.NEUTRAL,
-            weight=Decimal("1"),
+            weight=weight,
             score=Decimal("50"),
             explanation="数据不足，无法计算趋势",
         )
@@ -229,7 +235,6 @@ def _evaluate_trend(closes: List[Decimal], direction: str) -> IndicatorResult:
     current_price = closes[-1]
     current_sma20 = sma_20[-1]
     current_sma50 = sma_50[-1]
-    weight = Decimal("1.2")
 
     price_above_sma20 = current_price > current_sma20
     price_above_sma50 = current_price > current_sma50
@@ -278,12 +283,12 @@ def _evaluate_trend(closes: List[Decimal], direction: str) -> IndicatorResult:
     )
 
 
-def _evaluate_volume(klines: List[Kline], direction: str) -> IndicatorResult:
+def _evaluate_volume(klines: List[Kline], direction: str, weight: Decimal = DEFAULT_WEIGHTS["volume"]) -> IndicatorResult:
     if len(klines) < 20:
         return IndicatorResult(
             name="Volume",
             signal=SignalType.NEUTRAL,
-            weight=Decimal("0.8"),
+            weight=weight,
             score=Decimal("50"),
             explanation="数据不足，无法分析成交量",
         )
@@ -296,8 +301,6 @@ def _evaluate_volume(klines: List[Kline], direction: str) -> IndicatorResult:
     current_price = klines[-1].close
     prev_price = klines[-2].close
     price_up = current_price > prev_price
-
-    weight = Decimal("0.8")
 
     if direction == "LONG":
         if volume_ratio > Decimal("1.5") and price_up:
@@ -348,16 +351,22 @@ def evaluate_trade(
     entry_price: Decimal,
     klines: List[Kline],
     interval: KlineInterval = KlineInterval.ONE_HOUR,
+    weights: dict[str, Decimal] | None = None,
 ) -> AIEvaluationResult:
     Direction(direction)  # 校验 direction 是合法的 Direction 枚举值
+    effective = dict(DEFAULT_WEIGHTS)
+    if weights:
+        for k, v in weights.items():
+            if k in effective:
+                effective[k] = Decimal(str(v))
     closes = get_closes(klines)
 
     signals = [
-        _evaluate_rsi(closes, direction),
-        _evaluate_macd(closes, direction),
-        _evaluate_bollinger(klines, closes, direction),
-        _evaluate_trend(closes, direction),
-        _evaluate_volume(klines, direction),
+        _evaluate_rsi(closes, direction, effective["rsi"]),
+        _evaluate_macd(closes, direction, effective["macd"]),
+        _evaluate_bollinger(klines, closes, direction, effective["bollinger"]),
+        _evaluate_trend(closes, direction, effective["trend"]),
+        _evaluate_volume(klines, direction, effective["volume"]),
     ]
 
     total_weight = sum(s.weight for s in signals)
