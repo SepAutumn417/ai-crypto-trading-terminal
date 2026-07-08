@@ -183,7 +183,9 @@ export function PlanDetail({ planId }: { planId: string }) {
         onClose={() => setShowConfirm(false)}
         onConfirm={handleConfirm}
         result={result}
+        plan={plan}
         isSubmitting={executeMut.isPending}
+        errorMessage={executeMut.isError ? (executeMut.error as Error)?.message || '执行失败' : null}
       />
     </div>
   );

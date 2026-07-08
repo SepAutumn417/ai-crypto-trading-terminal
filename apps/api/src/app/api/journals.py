@@ -13,8 +13,19 @@ from app.schemas.trade_journal import (
     TradeJournalSummary,
 )
 from app.services.trade_journal_service import TradeJournalService
+from app.websocket import ws_manager
 
 router = APIRouter(prefix="/api/journals", tags=["journals"])
+
+
+async def _broadcast_journal(msg_type: str, journal_id: str | None = None) -> None:
+    """推送 journals 频道，失败不影响主流程。"""
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        await ws_manager.broadcast("journals", msg_type, {"journal_id": journal_id} if journal_id else {})
+    except Exception:
+        log.debug("broadcast journals failed", exc_info=True)
 
 
 @router.get("")
@@ -61,6 +72,7 @@ async def create_journal(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     journal = await TradeJournalService.create(db, data)
+    await _broadcast_journal("journal_created", str(journal.id))
     return ApiResponse.ok(TradeJournalOut.model_validate(journal).model_dump()).model_dump()
 
 
@@ -73,6 +85,7 @@ async def update_journal(
     journal = await TradeJournalService.update(db, journal_id, data)
     if not journal:
         raise AppException("JOURNAL_NOT_FOUND", "Journal not found", 404)
+    await _broadcast_journal("journal_updated", str(journal_id))
     return ApiResponse.ok(TradeJournalOut.model_validate(journal).model_dump()).model_dump()
 
 
@@ -84,4 +97,5 @@ async def delete_journal(
     success = await TradeJournalService.delete(db, journal_id)
     if not success:
         raise AppException("JOURNAL_NOT_FOUND", "Journal not found", 404)
+    await _broadcast_journal("journal_deleted", str(journal_id))
     return ApiResponse.ok({"deleted": True}).model_dump()

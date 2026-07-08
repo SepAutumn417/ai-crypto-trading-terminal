@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { JournalSummary } from '@/components/journal/JournalSummary';
 import { JournalList } from '@/components/journal/JournalList';
 import { JournalDetail } from '@/components/journal/JournalDetail';
+import { JournalEditForm } from '@/components/journal/JournalEditForm';
+import { useWebSocketInvalidation } from '@/lib/useWebSocket';
 
 export default function JournalPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<{ status?: string; symbol?: string }>({});
-  const qc = useQueryClient();
 
   const { data: summary, isError: summaryError } = useQuery({
     queryKey: ['journalSummary', filter.symbol],
@@ -26,6 +28,9 @@ export default function JournalPage() {
     queryFn: () => selectedId ? api.getJournal(selectedId) : null,
     enabled: !!selectedId,
   });
+
+  // 订阅 journals 频道：日志变更时实时刷新
+  useWebSocketInvalidation('journals', ['journals', 'journal', 'journalSummary']);
 
   const items = listData?.items || [];
 
@@ -75,8 +80,25 @@ export default function JournalPage() {
           />
         </div>
         <div className="lg:col-span-2">
-          <h2 className="text-xl font-bold mb-4">交易详情</h2>
-          <JournalDetail journal={selectedJournal || null} />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold">交易详情</h2>
+            {selectedJournal && !editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
+              >
+                编辑 / 平仓
+              </button>
+            )}
+          </div>
+          {selectedJournal && editing ? (
+            <JournalEditForm
+              journal={selectedJournal}
+              onClose={() => setEditing(false)}
+            />
+          ) : (
+            <JournalDetail journal={selectedJournal || null} />
+          )}
         </div>
       </div>
     </div>

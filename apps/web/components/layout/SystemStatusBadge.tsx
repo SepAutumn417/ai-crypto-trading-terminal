@@ -1,14 +1,18 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useWebSocketInvalidation } from '@/lib/useWebSocket';
 
 export function SystemStatusBadge() {
   const qc = useQueryClient();
   const { data: status } = useQuery({
     queryKey: ['systemStatus'],
     queryFn: () => api.getSystemStatus(),
-    refetchInterval: 5000,
+    // WebSocket 接收到 system 频道推送时会 invalidate，无需轮询
+    refetchInterval: false,
   });
+  // 订阅 system 频道，收到状态变更时刷新
+  useWebSocketInvalidation('system', ['systemStatus']);
   const toggleKill = useMutation({
     mutationFn: (enabled: boolean) => api.toggleKillSwitch(enabled),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['systemStatus'] }),

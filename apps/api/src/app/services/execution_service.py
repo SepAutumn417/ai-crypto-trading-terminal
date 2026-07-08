@@ -18,6 +18,7 @@ from app.config import settings
 from app.exceptions import ExecutionDisabledException, SubmissionFailedException
 from app.models import (
     PositionSizingResult as PositionSizingResultModel,
+    TradeJournal as TradeJournalModel,
     TradePlan as TradePlanModel,
 )
 from app.services.config_service import get_user_settings
@@ -122,6 +123,38 @@ async def _get_latest_sizing(db: AsyncSession, plan_id: UUID) -> PositionSizingR
     return result.scalar_one_or_none()
 
 
+async def _auto_create_journal_on_fill(db: AsyncSession, model: TradePlanModel) -> None:
+    """订单变为 FILLED 时自动创建 trade_journal（若尚未存在）。
+
+    幂等：通过 trade_plan_id 检查是否已存在 journal，避免重复创建。
+    字段从 trade_plan 自动填充，用户后续可在日志页补充复盘信息。
+    """
+    existing = await db.execute(
+        select(TradeJournalModel).where(TradeJournalModel.trade_plan_id == model.id).limit(1)
+    )
+    if existing.scalar_one_or_none() is not None:
+        return
+
+    filled_qty = model.filled_quantity or Decimal("0")
+    fill_price = model.average_fill_price or model.entry_price
+
+    journal = TradeJournalModel(
+        trade_plan_id=model.id,
+        exchange=model.exchange,
+        symbol=model.symbol,
+        direction=model.direction,
+        entry_price=fill_price,
+        quantity=filled_qty,
+        leverage=model.leverage,
+        setup_type=model.setup_type,
+        entry_reason=model.notes,
+        status="OPEN",
+        entry_at=model.updated_at,
+    )
+    db.add(journal)
+    logger.info("auto_created_journal plan_id=%s symbol=%s qty=%s", model.id, model.symbol, filled_qty)
+
+
 async def execute_plan(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
     """提交或幂等命中。
 
@@ -221,6 +254,10 @@ async def execute_plan(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
         model.execution_retryable = None
         model.execution_retry_after_seconds = None
 
+        # 订单成交时自动创建交易日志
+        if model.status == PlanStatus.FILLED.value:
+            await _auto_create_journal_on_fill(db, model)
+
         await db.commit()
         await db.refresh(model)
         logger.info(
@@ -277,11 +314,17 @@ async def sync_order_status(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
     exchange = _get_exchange()
     try:
         order = await exchange.get_order(model.symbol, model.exchange_order_id)
+        prev_status = model.status
         model.status = _order_status_to_plan_status(order.status).value
         model.filled_quantity = order.filled_quantity
         model.average_fill_price = order.average_fill_price
         model.execution_error = None
         model.execution_error_code = None
+
+        # 订单状态变为 FILLED 时自动创建交易日志
+        if prev_status != PlanStatus.FILLED.value and model.status == PlanStatus.FILLED.value:
+            await _auto_create_journal_on_fill(db, model)
+
         await db.commit()
         await db.refresh(model)
     except Exception as e:

@@ -9,12 +9,15 @@ from app.config import settings
 from app.exceptions import AppException
 from app.response import ApiResponse
 from app.services.execution_service import close_exchange
+from app.websocket import ws_manager
+from app.websocket.router import router as ws_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
     await close_exchange()
+    await ws_manager.shutdown()
 
 
 app = FastAPI(title="AI Personal Trading Terminal L4", version="0.1.0", lifespan=lifespan)
@@ -28,6 +31,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(ws_router)
 
 
 @app.exception_handler(AppException)

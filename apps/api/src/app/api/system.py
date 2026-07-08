@@ -15,6 +15,7 @@ from app.schemas.system import (
     SystemStatus,
     UserSettingsOut,
 )
+from app.websocket import ws_manager
 
 
 router = APIRouter(prefix="/api/system", tags=["system"])
@@ -75,6 +76,8 @@ async def toggle_kill_switch(
     db.add(event)
     await db.commit()
 
+    await _broadcast_system_status(settings)
+
     return ApiResponse.ok(UserSettingsOut(
         execution_enabled=settings.execution_enabled,
         kill_switch=settings.kill_switch,
@@ -106,6 +109,8 @@ async def toggle_execution_mode(
     )
     db.add(event)
     await db.commit()
+
+    await _broadcast_system_status(settings)
 
     return ApiResponse.ok(UserSettingsOut(
         execution_enabled=settings.execution_enabled,
@@ -168,9 +173,25 @@ async def update_user_settings(
     await db.commit()
     await db.refresh(settings)
 
+    await _broadcast_system_status(settings)
+
     return ApiResponse.ok(UserSettingsOut(
         execution_enabled=settings.execution_enabled,
         kill_switch=settings.kill_switch,
         account_equity=settings.account_equity,
         mode=settings.mode,
     ).model_dump()).model_dump()
+
+
+async def _broadcast_system_status(settings: UserSettings) -> None:
+    """系统状态变更后推送 system 频道。失败不影响主流程。"""
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        await ws_manager.broadcast("system", "status_update", {
+            "execution_enabled": settings.execution_enabled,
+            "kill_switch": settings.kill_switch,
+            "db_healthy": True,
+        })
+    except Exception:
+        log.debug("broadcast system status failed", exc_info=True)

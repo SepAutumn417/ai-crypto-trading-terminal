@@ -5,6 +5,7 @@ import { api, PlanCreate } from '@/lib/api';
 import { PlanForm } from '@/components/plans/PlanForm';
 import { PlanList } from '@/components/plans/PlanList';
 import { PlanDetail } from '@/components/plans/PlanDetail';
+import { useWebSocketInvalidation } from '@/lib/useWebSocket';
 
 export default function PlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
@@ -17,6 +18,9 @@ export default function PlansPage() {
     mutationFn: (input: PlanCreate) => api.createPlan(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['plans'] }),
   });
+
+  // 订阅 plans 频道：计划状态变更时实时刷新列表和详情
+  useWebSocketInvalidation('plans', ['plans', 'plan']);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

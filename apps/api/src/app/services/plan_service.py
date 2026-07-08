@@ -1,11 +1,13 @@
 from uuid import UUID, uuid4
 from decimal import Decimal
+import logging
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions import PlanNotRecheckableException
 from app.models import (
+    AIEvaluationResultModel,
     DecisionGateResult as DecisionGateResultModel,
     PositionSizingResult as PositionSizingResultModel,
     RiskCheck as RiskCheckModel,
@@ -14,7 +16,7 @@ from app.models import (
 from app.services.config_service import (
     get_account_risk_state, get_active_execution_config,
     get_active_opportunity_grade_config, get_active_risk_config,
-    get_active_symbol_rules, get_symbol_rule, get_user_settings,
+    get_active_symbol_rules, get_ai_indicator_weights, get_symbol_rule, get_user_settings,
 )
 from app.services.plan_converter import (
     to_schema as _to_schema, to_input as _to_input,
@@ -28,6 +30,8 @@ from shared.schemas import TradePlanInput, TradePlan as TradePlanSchema
 from decision_gate.gate import decide
 from position_sizing.calculator import calculate as calculate_position
 from risk_engine.checker import check as risk_check
+
+logger = logging.getLogger(__name__)
 
 
 async def create_plan(db: AsyncSession, plan_input: TradePlanInput) -> TradePlanSchema:
@@ -104,8 +108,40 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         exchange_connected=False, db_healthy=True,
     )
 
+    # AI 评估：拉取 K 线并调用 ai_evaluator，结果落库并参与决策门融合
+    ai_eval_dict: dict | None = None
+    ai_model: AIEvaluationResultModel | None = None
+    try:
+        from app.services.execution_service import _get_exchange
+        from ai_evaluator import evaluate_trade
+        from exchange_adapter import KlineInterval
+
+        exchange = _get_exchange()
+        interval = KlineInterval.ONE_HOUR
+        klines = await exchange.get_klines(model.symbol, interval, limit=100)
+        weights = await get_ai_indicator_weights(db)
+        ai_result = evaluate_trade(
+            symbol=model.symbol,
+            direction=plan_input.direction.value,
+            entry_price=plan_input.entry_price,
+            klines=klines,
+            interval=interval,
+            weights=weights or None,
+        )
+        ai_eval_dict = {
+            "grade": ai_result.grade.value,
+            "overall_score": float(ai_result.overall_score),
+            "symbol": ai_result.symbol,
+            "direction": ai_result.direction,
+            "recommendation": ai_result.recommendation,
+            "risk_level": ai_result.risk_level,
+        }
+    except Exception as e:
+        logger.warning("AI 评估失败，跳过融合（plan_id=%s）: %s", plan_id, e)
+
     decision = decide(
         risk_result=risk, execution_enabled=exec_enabled, kill_switch=kill_sw,
+        ai_evaluation=ai_eval_dict,
     )
 
     async with db.begin_nested():
@@ -134,6 +170,15 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
             )
             .values(is_latest=False)
         )
+        if ai_eval_dict is not None:
+            await db.execute(
+                update(AIEvaluationResultModel)
+                .where(
+                    AIEvaluationResultModel.trade_plan_id == plan_id,
+                    AIEvaluationResultModel.is_latest == True,  # noqa: E712
+                )
+                .values(is_latest=False)
+            )
 
         sizing_model = PositionSizingResultModel(
             id=uuid4(), trade_plan_id=plan_id,
@@ -161,6 +206,19 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         await db.flush()
         db.add(decision_model)
 
+        # AI 评估结果落库
+        if ai_eval_dict is not None:
+            ai_model = AIEvaluationResultModel(
+                id=uuid4(), trade_plan_id=plan_id,
+                symbol=ai_result.symbol, direction=ai_result.direction,
+                overall_score=ai_result.overall_score, grade=ai_result.grade.value,
+                recommendation=ai_result.recommendation, risk_level=ai_result.risk_level,
+                signals=[s.model_dump(mode="json") for s in ai_result.signals],
+                summary=ai_result.summary, conviction=ai_result.conviction,
+                interval=interval.value,
+            )
+            db.add(ai_model)
+
         if decision.result == DecisionGateStatus.ALLOW_CONFIRM:
             model.status = PlanStatus.READY_FOR_CONFIRMATION.value
         else:
@@ -174,10 +232,24 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
     await db.refresh(sizing_model)
     await db.refresh(risk_model)
     await db.refresh(decision_model)
+    if ai_model is not None:
+        await db.refresh(ai_model)
 
-    return {
+    result = {
         "plan": _to_schema(model),
         "sizing": _to_sizing_out(sizing_model),
         "risk": _to_risk_out(risk_model),
         "decision": _to_decision_out(decision_model),
     }
+    if ai_model is not None:
+        result["ai_evaluation"] = {
+            "id": str(ai_model.id),
+            "grade": ai_model.grade,
+            "overall_score": str(ai_model.overall_score),
+            "recommendation": ai_model.recommendation,
+            "risk_level": ai_model.risk_level,
+            "summary": ai_model.summary,
+            "conviction": str(ai_model.conviction),
+            "signals": ai_model.signals,
+        }
+    return result

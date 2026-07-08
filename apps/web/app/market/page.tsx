@@ -1,10 +1,12 @@
 'use client';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, KlineInterval } from '@/lib/api';
 import { KlineChart } from '@/components/market/KlineChart';
 import { Orderbook } from '@/components/market/Orderbook';
 import { TickerInfo } from '@/components/market/TickerInfo';
+import { useTickerWebSocket } from '@/lib/useWebSocket';
+import type { Ticker } from '@/lib/api';
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT'];
 const INTERVALS: { label: string; value: KlineInterval }[] = [
@@ -23,7 +25,8 @@ export default function MarketPage() {
   const { data: ticker, isError: tickerError } = useQuery({
     queryKey: ['ticker', symbol],
     queryFn: () => api.getTicker(symbol),
-    refetchInterval: 5000,
+    // WebSocket 实时推送 ticker，HTTP 仅做初始加载和兜底
+    refetchInterval: 30000,
   });
 
   const { data: klines = [], isError: klinesError, error: klinesErr } = useQuery({
@@ -35,6 +38,23 @@ export default function MarketPage() {
     queryKey: ['orderbook', symbol],
     queryFn: () => api.getOrderbook(symbol, 20),
     refetchInterval: 2000,
+  });
+
+  // 实时 ticker 推送：直接更新 query cache，避免额外 HTTP 请求
+  const qc = useQueryClient();
+  useTickerWebSocket(symbol, (data) => {
+    const updated: Ticker = {
+      symbol: data.symbol,
+      last_price: data.last_price,
+      mark_price: data.mark_price || null,
+      index_price: ticker?.index_price || null,
+      high_24h: ticker?.high_24h || null,
+      low_24h: ticker?.low_24h || null,
+      volume_24h: ticker?.volume_24h || null,
+      change_percent_24h: ticker?.change_percent_24h || null,
+      timestamp: data.timestamp || null,
+    };
+    qc.setQueryData(['ticker', symbol], updated);
   });
 
   return (
