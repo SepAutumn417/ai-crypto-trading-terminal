@@ -101,18 +101,27 @@ async def create_config(
 async def activate_config(
     version_id: UUID, db: AsyncSession = Depends(get_db),
 ) -> dict:
-    target = await db.get(ConfigVersionModel, version_id)
+    # 单事务内：先锁住目标行（行锁），再锁住同 config_type 的全部行，
+    # 防止并发激活同类型不同版本导致竞态。
+    result = await db.execute(
+        select(ConfigVersionModel)
+        .where(ConfigVersionModel.id == version_id)
+        .with_for_update()
+    )
+    target = result.scalar_one_or_none()
     if target is None:
         return ApiResponse.err("CONFIG_NOT_FOUND", f"配置 {version_id} 不存在").model_dump()
 
     config_type = target.config_type
 
+    # 锁住同 config_type 所有行，串行化并发激活
     await db.execute(
         select(ConfigVersionModel)
         .where(ConfigVersionModel.config_type == config_type)
         .with_for_update()
     )
 
+    # 同事务内将其他 active 版本置为 inactive
     await db.execute(
         update(ConfigVersionModel)
         .where(

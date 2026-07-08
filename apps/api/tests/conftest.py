@@ -15,6 +15,7 @@ from app.db import Base, get_db
 from app.main import app
 from app.models import *  # noqa
 from app.seed import seed_all
+from app.services import execution_service
 
 
 settings.database_url = os.environ["DATABASE_URL"]

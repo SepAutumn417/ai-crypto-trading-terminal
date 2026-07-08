@@ -140,3 +140,87 @@ async def test_partial_unique_index_enforced(db_session):
         async with eng.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
         await eng.dispose()
+
+
+@pytest.mark.asyncio
+async def test_concurrent_activation_only_one_wins():
+    """并发激活同 config_type 的两个版本，最终只能有一个 is_active=True。
+
+    用两个独立 session + asyncio.gather 模拟并发，
+    SELECT FOR UPDATE 串行化 + partial unique index 保证最终一致性。
+    """
+    import asyncio
+    import os
+    import uuid as _uuid
+    from datetime import datetime, timezone
+
+    from sqlalchemy import select, update
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+    from app.models import ConfigVersionModel as CVM
+    from app.db import Base
+
+    eng = create_async_engine(
+        os.environ.get("TEST_DATABASE_URL",
+                       "postgresql+asyncpg://crypto:crypto@localhost:5432/crypto_terminal_test"),
+        echo=False, future=True,
+    )
+    Sess = async_sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
+    async with eng.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    try:
+        # 预置两个同 type 的 inactive 版本
+        async with Sess() as s:
+            id_a, id_b = _uuid.uuid4(), _uuid.uuid4()
+            s.add_all([
+                CVM(id=id_a, config_type="risk", version_label="risk-concurrent-a",
+                    payload={}, is_active=False, activated_at=None),
+                CVM(id=id_b, config_type="risk", version_label="risk-concurrent-b",
+                    payload={}, is_active=False, activated_at=None),
+            ])
+            await s.commit()
+
+        async def activate(vid) -> bool:
+            async with Sess() as s:
+                # 锁住目标行
+                result = await s.execute(
+                    select(CVM).where(CVM.id == vid).with_for_update()
+                )
+                target = result.scalar_one()
+                ct = target.config_type
+                # 锁住同 type 全部行
+                await s.execute(
+                    select(CVM).where(CVM.config_type == ct).with_for_update()
+                )
+                # 其他版本置 inactive
+                await s.execute(
+                    update(CVM)
+                    .where(CVM.config_type == ct, CVM.id != vid, CVM.is_active == True)  # noqa: E712
+                    .values(is_active=False)
+                )
+                if not target.is_active:
+                    target.is_active = True
+                    target.activated_at = datetime.now(timezone.utc)
+                try:
+                    await s.commit()
+                    return True
+                except IntegrityError:
+                    await s.rollback()
+                    return False
+
+        results = await asyncio.gather(activate(id_a), activate(id_b))
+        # 两个都应成功提交（串行化），但最终只有一个 active
+        assert all(results), f"两个激活事务都应成功，结果: {results}"
+
+        async with Sess() as s:
+            result = await s.execute(
+                select(CVM).where(CVM.config_type == "risk", CVM.is_active == True)  # noqa: E712
+            )
+            active = result.scalars().all()
+            assert len(active) == 1, f"应有且仅有 1 个 active，实际 {len(active)}"
+    finally:
+        async with eng.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await eng.dispose()
