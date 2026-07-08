@@ -76,7 +76,7 @@ export function PlanDetail({ planId }: { planId: string }) {
 
   if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
 
-  const canExecute = plan.status === 'READY_FOR_CONFIRMATION' || result?.decision.result === 'ALLOW_CONFIRM';
+  const canExecute = plan.status === 'READY_FOR_CONFIRMATION' || plan.status === 'FAILED' || result?.decision.result === 'ALLOW_CONFIRM';
   const canSync = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
   const canCancel = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
 
@@ -112,7 +112,21 @@ export function PlanDetail({ planId }: { planId: string }) {
             <div className="col-span-2">成交均价: {plan.average_fill_price}</div>
           )}
           {plan.execution_error && (
-            <div className="col-span-2 text-red-400">错误: {plan.execution_error}</div>
+            <div className="col-span-2 p-3 bg-red-900/30 border border-red-700 rounded text-red-300">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold">执行失败</span>
+                {plan.execution_error_code && (
+                  <span className="text-xs px-2 py-0.5 bg-red-800 rounded">{plan.execution_error_code}</span>
+                )}
+                {plan.execution_retryable && (
+                  <span className="text-xs px-2 py-0.5 bg-yellow-800 rounded text-yellow-200">可重试</span>
+                )}
+              </div>
+              <div className="text-sm">{plan.execution_error}</div>
+              {plan.execution_attempts > 0 && (
+                <div className="text-xs text-gray-400 mt-1">尝试次数: {plan.execution_attempts}</div>
+              )}
+            </div>
           )}
         </div>
         {plan.exchange_order_id && (
@@ -127,17 +141,19 @@ export function PlanDetail({ planId }: { planId: string }) {
               {checkMut.isPending ? '检查中...' : '运行检查'}
             </button>
           )}
-          {(plan.status === 'READY_FOR_CONFIRMATION' || (result && canExecute)) && (
+          {(plan.status === 'READY_FOR_CONFIRMATION' || plan.status === 'FAILED' || (result && canExecute)) && (
             <button
               onClick={handleExecute}
               disabled={!canExecute || executeMut.isPending}
               className={`px-4 py-2 rounded ${
                 canExecute && !executeMut.isPending
-                  ? 'bg-blue-600 hover:bg-blue-700'
+                  ? plan.status === 'FAILED'
+                    ? 'bg-orange-600 hover:bg-orange-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
                   : 'bg-gray-700 text-gray-500 cursor-not-allowed'
               }`}
             >
-              {executeMut.isPending ? '提交中...' : '执行交易'}
+              {executeMut.isPending ? '提交中...' : plan.status === 'FAILED' ? '重试执行' : '执行交易'}
             </button>
           )}
           {canSync && (

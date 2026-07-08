@@ -75,6 +75,10 @@ export interface TradePlan {
   filled_quantity: string | null;
   average_fill_price: string | null;
   execution_error: string | null;
+  execution_attempts: number;
+  execution_error_code: string | null;
+  execution_retryable: boolean | null;
+  execution_retry_after_seconds: number | null;
   created_at: string;
   updated_at: string;
 }
