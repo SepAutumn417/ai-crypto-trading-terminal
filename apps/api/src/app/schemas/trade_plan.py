@@ -49,6 +49,10 @@ class TradePlanOut(BaseModel):
     filled_quantity: Decimal | None = None
     average_fill_price: Decimal | None = None
     execution_error: str | None = None
+    execution_attempts: int = 0
+    execution_error_code: str | None = None
+    execution_retryable: bool | None = None
+    execution_retry_after_seconds: int | None = None
     created_at: datetime
     updated_at: datetime
 

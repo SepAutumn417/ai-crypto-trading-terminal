@@ -20,3 +20,35 @@ class PlanNotFoundException(AppException):
 class PlanStatusException(AppException):
     def __init__(self, plan_id: str, current: str, expected: str):
         super().__init__("PLAN_STATUS_ERROR", f"计划 {plan_id} 状态 {current}，期望 {expected}", 409)
+
+
+class SubmissionFailedException(AppException):
+    def __init__(self, plan_id: str, error_code: str, error_message: str, retryable: bool = False, retry_after_seconds: int | None = None):
+        details = {
+            "plan_id": str(plan_id),
+            "error_code": error_code,
+            "retryable": retryable,
+        }
+        if retry_after_seconds is not None:
+            details["retry_after_seconds"] = retry_after_seconds
+        super().__init__(
+            "SUBMISSION_FAILED",
+            f"订单提交失败: {error_message}",
+            422,
+            details=details,
+        )
+
+
+class ExecutionDisabledException(AppException):
+    def __init__(self, reason: str):
+        super().__init__("EXECUTION_DISABLED", reason, 409)
+
+
+class IdempotencyConflictException(AppException):
+    def __init__(self, plan_id: str, current_status: str):
+        super().__init__(
+            "IDEMPOTENCY_CONFLICT",
+            f"计划 {plan_id} 已在状态 {current_status}，无需重复执行",
+            409,
+            details={"plan_id": str(plan_id), "current_status": current_status},
+        )

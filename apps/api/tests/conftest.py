@@ -31,6 +31,13 @@ async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
 app.dependency_overrides[get_db] = override_get_db
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def _reset_exchange_singleton():
+    execution_service.reset_exchange_for_tests()
+    yield
+    execution_service.reset_exchange_for_tests()
+
+
 @pytest_asyncio.fixture
 async def client():
     async with engine.begin() as conn:

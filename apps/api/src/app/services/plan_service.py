@@ -168,6 +168,10 @@ def _to_schema(m: TradePlanModel) -> TradePlanSchema:
         filled_quantity=m.filled_quantity,
         average_fill_price=m.average_fill_price,
         execution_error=m.execution_error,
+        execution_attempts=m.execution_attempts,
+        execution_error_code=m.execution_error_code,
+        execution_retryable=m.execution_retryable,
+        execution_retry_after_seconds=m.execution_retry_after_seconds,
         created_at=m.created_at, updated_at=m.updated_at,
     )
 
