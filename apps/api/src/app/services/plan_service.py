@@ -1,9 +1,10 @@
 from uuid import UUID, uuid4
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exceptions import PlanNotRecheckableException
 from app.models import (
     DecisionGateResult as DecisionGateResultModel,
     PositionSizingResult as PositionSizingResultModel,
@@ -69,7 +70,7 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
     if model is None:
         raise LookupError(f"Plan {plan_id} not found")
     if model.status not in (PlanStatus.DRAFT.value, PlanStatus.CHECKED.value):
-        raise ValueError(f"Plan status {model.status} 不允许 check")
+        raise PlanNotRecheckableException(str(plan_id), model.status)
 
     plan_input = _to_input(model)
 
@@ -103,6 +104,32 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
     )
 
     async with db.begin_nested():
+        # 翻转旧记录 is_latest → false
+        await db.execute(
+            update(PositionSizingResultModel)
+            .where(
+                PositionSizingResultModel.trade_plan_id == plan_id,
+                PositionSizingResultModel.is_latest == True,  # noqa: E712
+            )
+            .values(is_latest=False)
+        )
+        await db.execute(
+            update(RiskCheckModel)
+            .where(
+                RiskCheckModel.trade_plan_id == plan_id,
+                RiskCheckModel.is_latest == True,  # noqa: E712
+            )
+            .values(is_latest=False)
+        )
+        await db.execute(
+            update(DecisionGateResultModel)
+            .where(
+                DecisionGateResultModel.trade_plan_id == plan_id,
+                DecisionGateResultModel.is_latest == True,  # noqa: E712
+            )
+            .values(is_latest=False)
+        )
+
         sizing_model = PositionSizingResultModel(
             id=uuid4(), trade_plan_id=plan_id,
             equity=sizing.equity, risk_percent=sizing.risk_percent, risk_amount=sizing.risk_amount,

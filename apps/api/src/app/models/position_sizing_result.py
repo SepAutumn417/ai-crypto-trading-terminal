@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Numeric, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -31,4 +31,5 @@ class PositionSizingResult(Base):
     risk_reward_ratio: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     estimated_loss_at_stop: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
     sizing_warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    is_latest: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

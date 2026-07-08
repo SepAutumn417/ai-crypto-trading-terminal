@@ -52,3 +52,13 @@ class IdempotencyConflictException(AppException):
             409,
             details={"plan_id": str(plan_id), "current_status": current_status},
         )
+
+
+class PlanNotRecheckableException(AppException):
+    def __init__(self, plan_id: str, current_status: str):
+        super().__init__(
+            "PLAN_NOT_RECHECKABLE",
+            f"计划 {plan_id} 状态 {current_status}，不允许重新检查",
+            409,
+            details={"plan_id": str(plan_id), "current_status": current_status},
+        )
