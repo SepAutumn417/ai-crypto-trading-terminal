@@ -20,18 +20,18 @@ export default function MarketPage() {
   const [symbol, setSymbol] = useState('BTCUSDT');
   const [interval, setInterval] = useState<KlineInterval>('1h');
 
-  const { data: ticker } = useQuery({
+  const { data: ticker, isError: tickerError } = useQuery({
     queryKey: ['ticker', symbol],
     queryFn: () => api.getTicker(symbol),
     refetchInterval: 5000,
   });
 
-  const { data: klines = [] } = useQuery({
+  const { data: klines = [], isError: klinesError, error: klinesErr } = useQuery({
     queryKey: ['klines', symbol, interval],
     queryFn: () => api.getKlines(symbol, interval, 100),
   });
 
-  const { data: orderbook } = useQuery({
+  const { data: orderbook, isError: orderbookError } = useQuery({
     queryKey: ['orderbook', symbol],
     queryFn: () => api.getOrderbook(symbol, 20),
     refetchInterval: 2000,
@@ -39,6 +39,11 @@ export default function MarketPage() {
 
   return (
     <div className="space-y-6">
+      {tickerError && <p className="text-red-400 text-sm">行情数据加载失败</p>}
+      {klinesError && (
+        <p className="text-red-400 text-sm">K 线加载失败：{(klinesErr as Error).message}</p>
+      )}
+      {orderbookError && <p className="text-red-400 text-sm">订单簿加载失败</p>}
       <div className="flex flex-wrap items-center gap-4">
         <div className="flex gap-2">
           {SYMBOLS.map((s) => (

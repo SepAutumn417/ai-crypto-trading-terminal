@@ -19,7 +19,7 @@ export default function AIPage() {
   const [entryPrice, setEntryPrice] = useState('65000');
   const [interval, setInterval] = useState<KlineInterval>('1h');
 
-  const { data: evaluation, isLoading, refetch } = useQuery({
+  const { data: evaluation, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['ai-evaluate', symbol, direction, entryPrice, interval],
     queryFn: () => api.evaluateOpportunity({
       symbol,
@@ -38,6 +38,10 @@ export default function AIPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">AI 智能评估</h1>
+
+      {isError && (
+        <p className="text-red-400 text-sm">评估失败：{(error as Error).message}</p>
+      )}
 
       <div className="bg-gray-900 rounded-lg p-6">
         <h2 className="text-lg font-semibold mb-4">交易设置</h2>

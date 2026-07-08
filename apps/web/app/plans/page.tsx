@@ -9,7 +9,7 @@ import { PlanDetail } from '@/components/plans/PlanDetail';
 export default function PlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const qc = useQueryClient();
-  const { data: plans = [], isLoading } = useQuery({
+  const { data: plans = [], isLoading, isError, error } = useQuery({
     queryKey: ['plans'],
     queryFn: () => api.listPlans(),
   });
@@ -24,6 +24,9 @@ export default function PlansPage() {
         <h2 className="text-xl font-bold">新建计划</h2>
         <PlanForm onSubmit={(v) => createMut.mutate(v)} submitting={createMut.isPending} />
         <h2 className="text-xl font-bold mt-6">计划列表</h2>
+        {isError && (
+          <p className="text-red-400 text-sm">加载计划失败：{(error as Error).message}</p>
+        )}
         <PlanList plans={plans} loading={isLoading} onSelect={setSelectedPlanId} selectedId={selectedPlanId} />
       </div>
       <div className="lg:col-span-2">

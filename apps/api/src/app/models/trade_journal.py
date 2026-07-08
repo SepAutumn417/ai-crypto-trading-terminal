@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Numeric, String, Text, func
+from sqlalchemy import DateTime, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -11,6 +11,12 @@ from app.db import Base
 
 class TradeJournal(Base):
     __tablename__ = "trade_journals"
+    __table_args__ = (
+        Index("ix_trade_journals_symbol", "symbol"),
+        Index("ix_trade_journals_status", "status"),
+        Index("ix_trade_journals_created_at", "created_at"),
+        Index("ix_trade_journals_trade_plan_id", "trade_plan_id"),
+    )
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     trade_plan_id: Mapped[UUID | None] = mapped_column(PgUUID(as_uuid=True), nullable=True)

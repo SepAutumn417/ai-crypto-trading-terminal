@@ -50,6 +50,7 @@ async def get_active_risk_config(db: AsyncSession) -> tuple[RiskConfig, str]:
             daily_loss_limit_r=_parse_decimal(p["daily_loss_limit_r"]),
             max_consecutive_losses=int(p["max_consecutive_losses"]),
             cooldown_minutes_after_loss=int(p["cooldown_minutes_after_loss"]),
+            max_notional_equity_ratio=_parse_decimal(p.get("max_notional_equity_ratio", 20)),
         ),
         version.version_label,
     )

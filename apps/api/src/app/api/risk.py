@@ -65,21 +65,7 @@ async def risk_check_endpoint(
         setup_type=body.plan.setup_type, margin_mode=body.plan.margin_mode, notes=body.plan.notes,
     )
 
-    sizing = PositionSizingSchema(
-        id=body.sizing_result.id,
-        trade_plan_id=body.sizing_result.trade_plan_id,
-        equity=body.sizing_result.equity, risk_percent=body.sizing_result.risk_percent,
-        risk_amount=body.sizing_result.risk_amount, entry_price=body.sizing_result.entry_price,
-        stop_loss_price=body.sizing_result.stop_loss_price,
-        stop_distance_percent=body.sizing_result.stop_distance_percent,
-        notional_value=body.sizing_result.notional_value, raw_size=body.sizing_result.raw_size,
-        rounded_size=body.sizing_result.rounded_size,
-        required_margin=body.sizing_result.required_margin, leverage=body.sizing_result.leverage,
-        estimated_fee=body.sizing_result.estimated_fee,
-        risk_reward_ratio=body.sizing_result.risk_reward_ratio,
-        estimated_loss_at_stop=body.sizing_result.estimated_loss_at_stop,
-        sizing_warnings=body.sizing_result.sizing_warnings,
-    )
+    sizing = PositionSizingSchema.model_validate(body.sizing_result.model_dump())
 
     risk_config, risk_ver = await get_active_risk_config(db)
     execution_config, _ = await get_active_execution_config(db)

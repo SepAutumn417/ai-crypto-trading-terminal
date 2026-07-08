@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
 from app.db import get_db
+from app.exceptions import AppException
 from app.models import ConfigVersionModel
 from app.response import ApiResponse
 from app.schemas.config import (
@@ -34,6 +35,11 @@ def _config_type_set() -> set[str]:
     return {ct.value for ct in ConfigType}
 
 
+def _ensure_config_type(type: str) -> None:
+    if type not in _config_type_set():
+        raise AppException("INVALID_CONFIG_TYPE", f"未知配置类型: {type}", 400)
+
+
 @router.get("/active")
 async def get_active_configs(db: AsyncSession = Depends(get_db)) -> dict:
     result = await db.execute(
@@ -53,8 +59,7 @@ async def list_configs(
     type: str = Query(..., description="配置类型: risk/execution/opportunity_grade/symbol_rules"),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    if type not in _config_type_set():
-        return ApiResponse.err("INVALID_CONFIG_TYPE", f"未知配置类型: {type}").model_dump()
+    _ensure_config_type(type)
     result = await db.execute(
         select(ConfigVersionModel)
         .where(ConfigVersionModel.config_type == type)
@@ -68,8 +73,7 @@ async def list_configs(
 async def create_config(
     body: CreateConfigRequest, db: AsyncSession = Depends(get_db),
 ) -> dict:
-    if body.config_type not in _config_type_set():
-        return ApiResponse.err("INVALID_CONFIG_TYPE", f"未知配置类型: {body.config_type}").model_dump()
+    _ensure_config_type(body.config_type)
 
     existing = await db.execute(
         select(ConfigVersionModel).where(
@@ -78,10 +82,11 @@ async def create_config(
         )
     )
     if existing.scalar_one_or_none() is not None:
-        return ApiResponse.err(
+        raise AppException(
             "DUPLICATE_LABEL",
             f"配置 {body.config_type}/{body.version_label} 已存在",
-        ).model_dump()
+            409,
+        )
 
     new_version = ConfigVersionModel(
         id=uuid4(),
@@ -92,7 +97,15 @@ async def create_config(
         activated_at=None,
     )
     db.add(new_version)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            "DUPLICATE_LABEL",
+            f"配置 {body.config_type}/{body.version_label} 已存在",
+            409,
+        )
     await db.refresh(new_version)
     return ApiResponse.ok(_to_out(new_version).model_dump()).model_dump()
 
@@ -110,7 +123,7 @@ async def activate_config(
     )
     target = result.scalar_one_or_none()
     if target is None:
-        return ApiResponse.err("CONFIG_NOT_FOUND", f"配置 {version_id} 不存在").model_dump()
+        raise AppException("CONFIG_NOT_FOUND", f"配置 {version_id} 不存在", 404)
 
     config_type = target.config_type
 
@@ -140,10 +153,11 @@ async def activate_config(
         await db.commit()
     except IntegrityError:
         await db.rollback()
-        return ApiResponse.err(
+        raise AppException(
             "ACTIVATE_CONFLICT",
             "激活配置冲突，请稍后重试",
-        ).model_dump()
+            409,
+        )
 
     await db.refresh(target)
     return ApiResponse.ok(_to_out(target).model_dump()).model_dump()

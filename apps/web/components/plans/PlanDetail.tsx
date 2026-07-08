@@ -5,7 +5,7 @@ import { SizingCard } from './SizingCard';
 import { RiskCard } from './RiskCard';
 import { DecisionCard } from './DecisionCard';
 import { OrderConfirmModal } from './OrderConfirmModal';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const ACTIVE_STATUSES = ['SUBMITTED', 'PARTIALLY_FILLED'];
 
@@ -67,12 +67,6 @@ export function PlanDetail({ planId }: { planId: string }) {
   const handleConfirm = () => {
     executeMut.mutate();
   };
-
-  useEffect(() => {
-    if (plan && result && result.plan.id === plan.id) {
-      setResult({ ...result, plan });
-    }
-  }, [plan, result]);
 
   if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
 

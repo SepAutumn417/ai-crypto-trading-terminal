@@ -1,6 +1,8 @@
 from uuid import uuid4
+from decimal import Decimal
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +18,11 @@ from app.schemas.system import (
 
 
 router = APIRouter(prefix="/api/system", tags=["system"])
+
+
+class UpdateEquityRequest(BaseModel):
+    account_equity: Decimal | None = None
+    mode: str | None = None
 
 
 @router.get("/status")
@@ -99,6 +106,67 @@ async def toggle_execution_mode(
     )
     db.add(event)
     await db.commit()
+
+    return ApiResponse.ok(UserSettingsOut(
+        execution_enabled=settings.execution_enabled,
+        kill_switch=settings.kill_switch,
+        account_equity=settings.account_equity,
+        mode=settings.mode,
+    ).model_dump()).model_dump()
+
+
+@router.get("/user-settings")
+async def get_user_settings_endpoint(db: AsyncSession = Depends(get_db)) -> dict:
+    """返回 UserSettings（包含 account_equity / mode），供 EquityEditor 使用。"""
+    settings = await db.get(UserSettings, 1)
+    if settings is None:
+        return ApiResponse.ok(UserSettingsOut(
+            execution_enabled=False,
+            kill_switch=True,
+            account_equity=None,
+            mode="training",
+        ).model_dump()).model_dump()
+
+    return ApiResponse.ok(UserSettingsOut(
+        execution_enabled=settings.execution_enabled,
+        kill_switch=settings.kill_switch,
+        account_equity=settings.account_equity,
+        mode=settings.mode,
+    ).model_dump()).model_dump()
+
+
+@router.put("/user-settings")
+async def update_user_settings(
+    body: UpdateEquityRequest, db: AsyncSession = Depends(get_db)
+) -> dict:
+    """更新 account_equity / mode。其他字段（execution_enabled/kill_switch）走专用端点。"""
+    settings = await db.get(UserSettings, 1)
+    if settings is None:
+        return ApiResponse.err(
+            "USER_SETTINGS_NOT_FOUND", "user_settings 未初始化"
+        ).model_dump()
+
+    if body.account_equity is not None:
+        settings.account_equity = body.account_equity
+    if body.mode is not None:
+        settings.mode = body.mode
+
+    event = SystemEvent(
+        id=uuid4(),
+        event_type="user_settings_updated",
+        severity="info",
+        entity_type="user_settings",
+        entity_id=None,
+        actor="user",
+        message=f"User settings updated: equity={body.account_equity}, mode={body.mode}",
+        payload={
+            "account_equity": str(body.account_equity) if body.account_equity is not None else None,
+            "mode": body.mode,
+        },
+    )
+    db.add(event)
+    await db.commit()
+    await db.refresh(settings)
 
     return ApiResponse.ok(UserSettingsOut(
         execution_enabled=settings.execution_enabled,

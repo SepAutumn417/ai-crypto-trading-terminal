@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from app.api.router import api_router
+from app.config import settings
 from app.exceptions import AppException
 from app.response import ApiResponse
 from app.services.execution_service import close_exchange
@@ -20,7 +21,7 @@ app = FastAPI(title="AI Personal Trading Terminal L4", version="0.1.0", lifespan
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -67,6 +68,16 @@ async def lookup_error_handler(request: Request, exc: LookupError) -> JSONRespon
     return JSONResponse(
         status_code=404,
         content=ApiResponse.err("NOT_FOUND", str(exc)).model_dump(),
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    import logging
+    logging.getLogger(__name__).exception("Unhandled exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content=ApiResponse.err("INTERNAL_ERROR", "服务器内部错误").model_dump(),
     )
 
 

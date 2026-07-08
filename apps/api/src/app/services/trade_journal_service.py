@@ -85,7 +85,7 @@ class TradeJournalService:
 
         total_trades = len(closed_trades)
         winning_trades = sum(1 for t in closed_trades if t.pnl and t.pnl > 0)
-        losing_trades = sum(1 for t in closed_trades if t.pnl and t.pnl <= 0)
+        losing_trades = sum(1 for t in closed_trades if t.pnl and t.pnl < 0)
 
         pnl_values = [t.pnl for t in closed_trades if t.pnl is not None]
         total_pnl = sum(pnl_values) if pnl_values else 0

@@ -8,11 +8,7 @@ import { OpportunityGradeEditor } from '@/components/settings/OpportunityGradeEd
 import { SymbolRulesEditor } from '@/components/settings/SymbolRulesEditor';
 
 export default function SettingsPage() {
-  const { data: settings } = useQuery({
-    queryKey: ['userSettings'],
-    queryFn: () => api.getUserSettings(),
-  });
-  const { data: activeConfigs } = useQuery({
+  const { data: activeConfigs, isError, error } = useQuery({
     queryKey: ['activeConfigs'],
     queryFn: () => api.getActiveConfigs(),
   });
@@ -20,7 +16,10 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">设置</h1>
-      <EquityEditor initialEquity={settings?.account_equity} />
+      {isError && (
+        <p className="text-red-400 text-sm">加载配置失败：{(error as Error).message}</p>
+      )}
+      <EquityEditor />
       <RiskConfigEditor activeConfig={activeConfigs?.risk} />
       <ExecutionConfigEditor activeConfig={activeConfigs?.execution} />
       <OpportunityGradeEditor activeConfig={activeConfigs?.opportunity_grade} />

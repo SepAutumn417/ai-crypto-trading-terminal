@@ -312,6 +312,7 @@ class BitgetExchange(Exchange):
             "partially_filled": OrderStatus.PARTIALLY_FILLED,
             "canceled": OrderStatus.CANCELED,
             "rejected": OrderStatus.REJECTED,
+            "expired": OrderStatus.EXPIRED,
         }
         status = status_map.get(state, OrderStatus.NEW)
 

@@ -5,7 +5,20 @@ import './globals.css';
 import { Navbar } from '@/components/layout/Navbar';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+  const [client] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        retry: 2,
+        refetchOnWindowFocus: false,
+      },
+      mutations: {
+        onError: (err) => {
+          console.error('Mutation error:', err);
+        },
+      },
+    },
+  }));
   return (
     <html lang="zh">
       <body>

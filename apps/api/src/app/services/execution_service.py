@@ -21,7 +21,7 @@ from app.models import (
     TradePlan as TradePlanModel,
 )
 from app.services.config_service import get_user_settings
-from app.services.plan_service import _to_schema
+from app.services.plan_converter import to_schema as _to_schema
 from exchange_adapter import (
     BitgetExchange, Exchange, MockExchange, OrderSide, OrderType, Order,
 )
@@ -49,9 +49,9 @@ def _get_exchange() -> Exchange:
             _exchange_instance = MockExchange()
         else:
             _exchange_instance = BitgetExchange(
-                api_key=getattr(settings, "bitget_api_key", None),
-                api_secret=getattr(settings, "bitget_api_secret", None),
-                passphrase=getattr(settings, "bitget_passphrase", None),
+                api_key=settings.bitget_api_key,
+                api_secret=settings.bitget_api_secret,
+                passphrase=settings.bitget_passphrase,
             )
     return _exchange_instance
 
@@ -195,6 +195,10 @@ async def execute_plan(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
 
     exchange = _get_exchange()
     try:
+        # 实盘下单前设置杠杆和保证金模式（MockExchange 实现为 no-op）
+        await exchange.set_leverage(model.symbol, int(model.leverage))
+        await exchange.set_margin_mode(model.symbol, model.margin_mode)
+
         order: Order = await exchange.place_order(
             symbol=model.symbol,
             side=side,
@@ -283,12 +287,16 @@ async def sync_order_status(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
     except Exception as e:
         error_code, retryable, retry_after = _classify_error(e)
         logger.exception("sync_order_status failed plan_id=%s error=%s", plan_id, e)
-        model.execution_error = str(e)
-        model.execution_error_code = error_code
-        model.execution_retryable = retryable
-        model.execution_retry_after_seconds = retry_after
-        await db.commit()
-        await db.refresh(model)
+        try:
+            model.execution_error = str(e)
+            model.execution_error_code = error_code
+            model.execution_retryable = retryable
+            model.execution_retry_after_seconds = retry_after
+            await db.commit()
+            await db.refresh(model)
+        except Exception:
+            logger.exception("sync_order_status: failed to persist failure state plan_id=%s", plan_id)
+            await db.rollback()
         raise SubmissionFailedException(
             plan_id=str(plan_id),
             error_code=error_code,
@@ -336,12 +344,16 @@ async def cancel_plan_order(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
     except Exception as e:
         error_code, retryable, retry_after = _classify_error(e)
         logger.exception("cancel_plan_order failed plan_id=%s error=%s", plan_id, e)
-        model.execution_error = str(e)
-        model.execution_error_code = error_code
-        model.execution_retryable = retryable
-        model.execution_retry_after_seconds = retry_after
-        await db.commit()
-        await db.refresh(model)
+        try:
+            model.execution_error = str(e)
+            model.execution_error_code = error_code
+            model.execution_retryable = retryable
+            model.execution_retry_after_seconds = retry_after
+            await db.commit()
+            await db.refresh(model)
+        except Exception:
+            logger.exception("cancel_plan_order: failed to persist failure state plan_id=%s", plan_id)
+            await db.rollback()
         raise SubmissionFailedException(
             plan_id=str(plan_id),
             error_code=error_code,

@@ -1,8 +1,9 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.exceptions import AppException
 from app.response import ApiResponse
 from app.schemas.trade_journal import (
     TradeJournalCreate,
@@ -50,7 +51,7 @@ async def get_journal(
 ) -> dict:
     journal = await TradeJournalService.get_by_id(db, journal_id)
     if not journal:
-        raise HTTPException(status_code=404, detail="Journal not found")
+        raise AppException("JOURNAL_NOT_FOUND", "Journal not found", 404)
     return ApiResponse.ok(TradeJournalOut.model_validate(journal).model_dump()).model_dump()
 
 
@@ -71,7 +72,7 @@ async def update_journal(
 ) -> dict:
     journal = await TradeJournalService.update(db, journal_id, data)
     if not journal:
-        raise HTTPException(status_code=404, detail="Journal not found")
+        raise AppException("JOURNAL_NOT_FOUND", "Journal not found", 404)
     return ApiResponse.ok(TradeJournalOut.model_validate(journal).model_dump()).model_dump()
 
 
@@ -82,5 +83,5 @@ async def delete_journal(
 ) -> dict:
     success = await TradeJournalService.delete(db, journal_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Journal not found")
+        raise AppException("JOURNAL_NOT_FOUND", "Journal not found", 404)
     return ApiResponse.ok({"deleted": True}).model_dump()

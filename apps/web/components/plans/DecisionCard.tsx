@@ -1,10 +1,12 @@
 'use client';
+import type { DecisionGateResult } from '@/lib/api';
+
 const colors: Record<string, string> = {
   ALLOW_CONFIRM: 'bg-green-600', REDUCE_RISK: 'bg-orange-600',
   WAIT: 'bg-yellow-600', BLOCK: 'bg-red-600', EXPIRED: 'bg-gray-600',
 };
 
-export function DecisionCard({ decision }: { decision: any }) {
+export function DecisionCard({ decision }: { decision: DecisionGateResult }) {
   return (
     <div className="p-4 border border-gray-800 rounded">
       <h4 className="font-bold mb-2">决策门</h4>

@@ -5,11 +5,12 @@ import { cn } from '@/lib/utils';
 const statusStyles: Record<string, string> = {
   DRAFT: 'bg-gray-700 text-gray-300',
   CHECKED: 'bg-blue-900 text-blue-300',
-  APPROVED: 'bg-green-900 text-green-300',
-  REJECTED: 'bg-red-900 text-red-300',
+  READY_FOR_CONFIRMATION: 'bg-green-900 text-green-300',
   SUBMITTED: 'bg-yellow-900 text-yellow-300',
+  PARTIALLY_FILLED: 'bg-orange-900 text-orange-300',
   FILLED: 'bg-emerald-900 text-emerald-300',
-  CLOSED: 'bg-gray-800 text-gray-400',
+  FAILED: 'bg-red-900 text-red-300',
+  EXPIRED: 'bg-gray-800 text-gray-500',
   CANCELLED: 'bg-gray-800 text-gray-500',
 };
 

@@ -1,5 +1,7 @@
 'use client';
-export function SizingCard({ sizing }: { sizing: any }) {
+import type { PositionSizingResult } from '@/lib/api';
+
+export function SizingCard({ sizing }: { sizing: PositionSizingResult }) {
   return (
     <div className="p-4 border border-gray-800 rounded">
       <h4 className="font-bold mb-2">仓位计算</h4>
@@ -21,6 +23,6 @@ export function SizingCard({ sizing }: { sizing: any }) {
   );
 }
 
-function Field({ label, v }: { label: string; v: any }) {
+function Field({ label, v }: { label: string; v: string | number | null }) {
   return <div><span className="text-gray-500">{label}:</span> <span className="font-mono">{v}</span></div>;
 }

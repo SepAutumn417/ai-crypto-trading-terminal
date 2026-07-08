@@ -1,10 +1,12 @@
 'use client';
+import type { RiskCheckResult } from '@/lib/api';
+
 const statusColors: Record<string, string> = {
   ALLOW: 'bg-green-600', ALLOW_CONFIRM: 'bg-green-600',
   WARN: 'bg-yellow-600', REDUCE_RISK: 'bg-orange-600', BLOCK: 'bg-red-600',
 };
 
-export function RiskCard({ risk }: { risk: any }) {
+export function RiskCard({ risk }: { risk: RiskCheckResult }) {
   return (
     <div className="p-4 border border-gray-800 rounded">
       <h4 className="font-bold mb-2">风控检查</h4>

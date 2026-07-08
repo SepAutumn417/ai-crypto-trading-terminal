@@ -11,12 +11,12 @@ export default function JournalPage() {
   const [filter, setFilter] = useState<{ status?: string; symbol?: string }>({});
   const qc = useQueryClient();
 
-  const { data: summary } = useQuery({
+  const { data: summary, isError: summaryError } = useQuery({
     queryKey: ['journalSummary', filter.symbol],
     queryFn: () => api.getJournalSummary(filter.symbol),
   });
 
-  const { data: listData, isLoading } = useQuery({
+  const { data: listData, isLoading, isError: listError, error } = useQuery({
     queryKey: ['journals', filter],
     queryFn: () => api.getJournals({ ...filter, page_size: 50 }),
   });
@@ -56,7 +56,14 @@ export default function JournalPage() {
         </div>
       </div>
 
+      {summaryError && (
+        <p className="text-red-400 text-sm">加载统计失败</p>
+      )}
       <JournalSummary data={summary || null} />
+
+      {listError && (
+        <p className="text-red-400 text-sm">加载日志失败：{(error as Error).message}</p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-4">

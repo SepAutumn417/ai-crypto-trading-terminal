@@ -49,42 +49,52 @@ export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) =
       <div className="grid grid-cols-2 gap-2">
         <label className="text-sm">交易对
           <input {...register('symbol')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.symbol && <p className="text-red-500 text-xs mt-0.5">{errors.symbol.message}</p>}
         </label>
         <label className="text-sm">方向
           <select {...register('direction')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
             <option value="LONG">做多</option>
             <option value="SHORT">做空</option>
           </select>
+          {errors.direction && <p className="text-red-500 text-xs mt-0.5">{errors.direction.message}</p>}
         </label>
         <label className="text-sm">入场价
           <input {...register('entry_price')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.entry_price && <p className="text-red-500 text-xs mt-0.5">{errors.entry_price.message}</p>}
         </label>
         <label className="text-sm">止损价
           <input {...register('stop_loss_price')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.stop_loss_price && <p className="text-red-500 text-xs mt-0.5">{errors.stop_loss_price.message}</p>}
         </label>
         <label className="text-sm col-span-2">止盈价（逗号分隔）
           <input {...register('take_profit_prices')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.take_profit_prices && <p className="text-red-500 text-xs mt-0.5">{errors.take_profit_prices.message}</p>}
         </label>
         <label className="text-sm">杠杆
           <input {...register('leverage')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.leverage && <p className="text-red-500 text-xs mt-0.5">{errors.leverage.message}</p>}
         </label>
         <label className="text-sm">风险%
           <input {...register('risk_percent')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.risk_percent && <p className="text-red-500 text-xs mt-0.5">{errors.risk_percent.message}</p>}
         </label>
         <label className="text-sm">等级
           <select {...register('opportunity_grade')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
             <option value="A">A</option><option value="B">B</option>
             <option value="C">C</option><option value="BLOCKED">BLOCKED</option>
           </select>
+          {errors.opportunity_grade && <p className="text-red-500 text-xs mt-0.5">{errors.opportunity_grade.message}</p>}
         </label>
         <label className="text-sm">保证金模式
           <select {...register('margin_mode')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
             <option value="isolated">逐仓</option>
             <option value="crossed">全仓</option>
           </select>
+          {errors.margin_mode && <p className="text-red-500 text-xs mt-0.5">{errors.margin_mode.message}</p>}
         </label>
         <label className="text-sm">账户权益
           <input {...register('equity')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
+          {errors.equity && <p className="text-red-500 text-xs mt-0.5">{errors.equity.message}</p>}
         </label>
         <label className="text-sm">形态类型
           <input {...register('setup_type')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />

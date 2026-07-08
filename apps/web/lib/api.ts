@@ -16,6 +16,7 @@ export type AIIndicatorSignal = Schema['IndicatorResult'];
 export type AIEvaluationResult = Schema['AIEvaluationResult'];
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+const DEFAULT_TIMEOUT_MS = 15_000;
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -24,14 +25,52 @@ export interface ApiResponse<T> {
   request_id: string;
 }
 
+export class ApiError extends Error {
+  code: string;
+  requestId: string;
+  statusCode: number;
+  constructor(message: string, code: string, requestId: string, statusCode: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = code;
+    this.requestId = requestId;
+    this.statusCode = statusCode;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new ApiError('请求超时', 'TIMEOUT', '', 408);
+    }
+    throw new ApiError(`网络错误: ${(e as Error).message}`, 'NETWORK_ERROR', '', 0);
+  }
+  clearTimeout(timeoutId);
+
+  // 非 JSON 响应（如 5xx HTML）兜底
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(`服务器错误 (HTTP ${res.status})`, 'HTTP_ERROR', '', res.status);
+  }
+
   const body: ApiResponse<T> = await res.json();
   if (!body.success) {
-    throw new Error(body.error?.message || 'API error');
+    throw new ApiError(
+      body.error?.message || 'API error',
+      body.error?.code || 'UNKNOWN',
+      body.request_id || '',
+      res.status,
+    );
   }
   return body.data as T;
 }
@@ -261,15 +300,9 @@ export const api = {
     request<UserSettings>('/api/system/kill-switch', { method: 'POST', body: JSON.stringify({ enabled }) }),
   toggleExecutionMode: (enabled: boolean) =>
     request<UserSettings>('/api/system/execution-mode', { method: 'POST', body: JSON.stringify({ enabled }) }),
-  getUserSettings: async (): Promise<UserSettings> => {
-    const s = await request<SystemStatus>('/api/system/status');
-    return {
-      execution_enabled: s.execution_enabled,
-      kill_switch: s.kill_switch,
-      account_equity: null,
-      mode: 'training',
-    };
-  },
+  getUserSettings: () => request<UserSettings>('/api/system/user-settings'),
+  updateUserSettings: (input: { account_equity?: string | null; mode?: string | null }) =>
+    request<UserSettings>('/api/system/user-settings', { method: 'PUT', body: JSON.stringify(input) }),
   getActiveConfigs: () => request<ActiveConfigs>('/api/configs/active'),
   listConfigs: (type: string) => request<ConfigVersion[]>(`/api/configs?type=${type}`),
   createConfig: (input: { config_type: string; version_label: string; payload: any }) =>
