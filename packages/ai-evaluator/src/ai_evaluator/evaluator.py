@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import List
 
 from exchange_adapter import Kline, KlineInterval
+from shared.enums import Direction
 from .types import (
     AIEvaluationResult,
     EvaluationGrade,
@@ -348,6 +349,7 @@ def evaluate_trade(
     klines: List[Kline],
     interval: KlineInterval = KlineInterval.ONE_HOUR,
 ) -> AIEvaluationResult:
+    Direction(direction)  # 校验 direction 是合法的 Direction 枚举值
     closes = get_closes(klines)
 
     signals = [
