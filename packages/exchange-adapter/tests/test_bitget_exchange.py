@@ -85,19 +85,17 @@ async def test_get_orderbook_parses_correctly(exchange):
 @pytest.mark.asyncio
 async def test_request_error_handling(exchange):
     """验证 _request 方法对非 00000 错误码抛 ValueError。"""
-    from unittest.mock import AsyncMock, MagicMock
+    import httpx
 
-    mock_resp = MagicMock()
-    mock_resp.json = AsyncMock(return_value={"code": "40001", "msg": "Invalid symbol", "data": {}})
-    mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
-    mock_resp.__aexit__ = AsyncMock(return_value=False)
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"code": "40001", "msg": "Invalid symbol", "data": {}})
 
-    mock_session = MagicMock()
-    mock_session.request = MagicMock(return_value=mock_resp)
-    exchange._session = mock_session
+    exchange._transport = httpx.MockTransport(handler)
 
     with pytest.raises(ValueError, match="Bitget API error"):
         await exchange.get_ticker("INVALID")
+
+    await exchange.close()
 
 
 @pytest.mark.asyncio

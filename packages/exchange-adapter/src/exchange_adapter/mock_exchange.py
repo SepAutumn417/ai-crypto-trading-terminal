@@ -32,6 +32,10 @@ class MockExchange(Exchange):
         self._orders: dict[str, Order] = {}
         self._order_counter = 0
 
+    async def close(self) -> None:
+        """Mock 无网络连接，close 为 no-op。"""
+        pass
+
     async def get_ticker(self, symbol: str) -> Ticker:
         price = self._base_price * Decimal(str(0.95 + self._rng.random() * 0.1))
         high = price * Decimal("1.02")

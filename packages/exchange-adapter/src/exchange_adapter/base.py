@@ -28,6 +28,17 @@ class Exchange(ABC):
     """
 
     @abstractmethod
+    async def close(self) -> None:
+        """关闭底层连接（HTTP session 等），进程退出时调用。"""
+        ...
+
+    async def __aenter__(self) -> "Exchange":
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.close()
+
+    @abstractmethod
     async def get_ticker(self, symbol: str) -> Ticker:
         """获取指定交易对的 Ticker 行情。"""
         ...

@@ -5,6 +5,16 @@ import hmac
 import hashlib
 import base64
 import json
+import logging
+
+import httpx
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from .base import Exchange
 from .types import (
@@ -22,8 +32,12 @@ from .types import (
     Ticker,
 )
 
+
 if TYPE_CHECKING:
-    import aiohttp
+    pass
+
+
+logger = logging.getLogger(__name__)
 
 
 INTERVAL_MAP = {
@@ -40,10 +54,15 @@ INTERVAL_MAP = {
 }
 
 
+_MAX_CONNECTIONS = 20
+_MAX_RETRIES = 3
+
+
 class BitgetExchange(Exchange):
     """Bitget USDT-M 合约交易所适配器。
 
     公开行情接口无需 API Key；私有接口需要 api_key + api_secret + passphrase。
+    使用 httpx.AsyncClient 连接池 + tenacity 重试。
     """
 
     BASE_URL = "https://api.bitget.com"
@@ -59,21 +78,23 @@ class BitgetExchange(Exchange):
         self.api_secret = api_secret
         self.passphrase = passphrase
         self.base_url = base_url or self.BASE_URL
-        self._session = None
+        self._client: Optional[httpx.AsyncClient] = None
+        self._transport: Optional[httpx.MockTransport] = None
 
-    async def _get_session(self) -> "aiohttp.ClientSession":
-        if self._session is None:
-            try:
-                import aiohttp
-            except ImportError:
-                raise ImportError("aiohttp is required for BitgetExchange. Install it with: pip install aiohttp")
-            self._session = aiohttp.ClientSession()
-        return self._session
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            limits = httpx.Limits(max_connections=_MAX_CONNECTIONS, max_keepalive_connections=_MAX_CONNECTIONS)
+            kwargs: dict = {"limits": limits, "timeout": httpx.Timeout(30.0)}
+            if self._transport is not None:
+                kwargs["transport"] = self._transport
+            self._client = httpx.AsyncClient(**kwargs)
+            self._limits = limits
+        return self._client
 
-    async def close(self):
-        if self._session:
-            await self._session.close()
-            self._session = None
+    async def close(self) -> None:
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+        self._client = None
 
     async def _sign(self, timestamp: str, method: str, path: str, body: Optional[str] = None) -> str:
         if not self.api_secret:
@@ -86,6 +107,13 @@ class BitgetExchange(Exchange):
         ).digest()
         return base64.b64encode(signature).decode('utf-8')
 
+    @retry(
+        stop=stop_after_attempt(_MAX_RETRIES),
+        wait=wait_exponential(min=0.5, max=3),
+        retry=retry_if_exception_type((httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+        reraise=True,
+    )
     async def _request(
         self,
         method: str,
@@ -119,12 +147,16 @@ class BitgetExchange(Exchange):
                 "locale": "en-US",
             })
 
-        session = await self._get_session()
-        async with session.request(method, url, params=params, json=body, headers=headers) as resp:
-            data = await resp.json()
-            if data.get("code") != "00000":
-                raise ValueError(f"Bitget API error: {data.get('msg', data)}")
-            return data.get("data", {})
+        client = await self._get_client()
+        resp = await client.request(method, url, params=params, json=body, headers=headers)
+
+        if resp.status_code >= 500:
+            raise httpx.RemoteProtocolError(f"Bitget server error: {resp.status_code}")
+
+        data = resp.json()
+        if data.get("code") != "00000":
+            raise ValueError(f"Bitget API error: {data.get('msg', data)}")
+        return data.get("data", {})
 
     async def get_ticker(self, symbol: str) -> Ticker:
         data = await self._request("GET", "/api/v2/mix/market/ticker", params={"symbol": symbol, "productType": "usdt-futures"})
