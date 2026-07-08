@@ -2,7 +2,7 @@ from uuid import uuid4
 from decimal import Decimal
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,9 +21,28 @@ from app.websocket import ws_manager
 router = APIRouter(prefix="/api/system", tags=["system"])
 
 
+VALID_MODES = {"training", "live"}
+MIN_EQUITY = Decimal("1")
+MAX_EQUITY = Decimal("10000000")
+
+
 class UpdateEquityRequest(BaseModel):
     account_equity: Decimal | None = None
     mode: str | None = None
+
+    @field_validator("mode")
+    @classmethod
+    def validate_mode(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_MODES:
+            raise ValueError(f"mode 必须是 {VALID_MODES} 之一")
+        return v
+
+    @field_validator("account_equity")
+    @classmethod
+    def validate_equity(cls, v: Decimal | None) -> Decimal | None:
+        if v is not None and (v < MIN_EQUITY or v > MAX_EQUITY):
+            raise ValueError(f"account_equity 必须在 {MIN_EQUITY} ~ {MAX_EQUITY} 之间")
+        return v
 
 
 @router.get("/status")

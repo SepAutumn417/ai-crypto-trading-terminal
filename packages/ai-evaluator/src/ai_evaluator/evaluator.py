@@ -370,7 +370,11 @@ def evaluate_trade(
     ]
 
     total_weight = sum(s.weight for s in signals)
-    weighted_score = sum(s.score * s.weight for s in signals) / total_weight
+    if total_weight <= 0:
+        # 权重全 0 或负数时降级为等权平均，避免除零崩溃
+        weighted_score = sum(s.score for s in signals) / Decimal(len(signals)) if signals else Decimal("0")
+    else:
+        weighted_score = sum(s.score * s.weight for s in signals) / total_weight
 
     if weighted_score >= Decimal("75"):
         grade = EvaluationGrade.A

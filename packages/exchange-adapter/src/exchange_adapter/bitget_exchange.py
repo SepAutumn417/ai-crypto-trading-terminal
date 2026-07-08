@@ -126,18 +126,25 @@ class BitgetExchange(Exchange):
 
         headers = {"Content-Type": "application/json"}
 
+        # 预先序列化 body 和 query string，确保签名与实际发送完全一致
+        # httpx 的 json= 参数默认用 json.dumps(body)（带空格），params= 按插入序拼接
+        # 签名必须使用与实际发送相同的字符串，否则 Bitget 会返回签名校验失败
+        body_str: Optional[str] = None
+        if body is not None:
+            body_str = json.dumps(body, separators=(',', ':'))
+
+        # query string 按 params 插入序构造（与 httpx 行为一致）
+        query_string = ""
+        if params:
+            query_string = "?" + "&".join(f"{k}={v}" for k, v in params.items())
+
         if is_private:
             if not self.api_key or not self.passphrase:
                 raise ValueError("API key and passphrase are required for private endpoints")
 
             timestamp = str(int(datetime.now(timezone.utc).timestamp() * 1000))
-            body_str = json.dumps(body, separators=(',', ':')) if body else ""
-            query_string = ""
-            if params:
-                query_string = "?" + "&".join(f"{k}={v}" for k, v in sorted(params.items()))
-
             sign_path = path + query_string
-            signature = await self._sign(timestamp, method, sign_path, body_str if body else None)
+            signature = await self._sign(timestamp, method, sign_path, body_str or "")
 
             headers.update({
                 "ACCESS-KEY": self.api_key,
@@ -148,12 +155,23 @@ class BitgetExchange(Exchange):
             })
 
         client = await self._get_client()
-        resp = await client.request(method, url, params=params, json=body, headers=headers)
+        # 用 content= 发送预序列化的 body，确保与签名字符串一致
+        # 用拼好 query_string 的完整 URL，避免 httpx params= 重新排序导致不一致
+        full_url = url + query_string
+        resp = await client.request(
+            method, full_url,
+            content=body_str if body_str else None,
+            headers=headers,
+        )
 
         if resp.status_code >= 500:
             raise httpx.RemoteProtocolError(f"Bitget server error: {resp.status_code}")
 
-        data = resp.json()
+        try:
+            data = resp.json()
+        except Exception:
+            raise ValueError(f"Bitget returned non-JSON response (HTTP {resp.status_code}): {resp.text[:200]}")
+
         if data.get("code") != "00000":
             raise ValueError(f"Bitget API error: {data.get('msg', data)}")
         return data.get("data", {})

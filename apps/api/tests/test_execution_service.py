@@ -173,9 +173,11 @@ async def test_execute_plan_marks_failed_on_exchange_error(client, db_session):
 
     assert resp.status_code == 422, resp.text
     body = resp.json()
-    assert body.get("code") == "SUBMISSION_FAILED"
-    assert body.get("data", {}).get("error_code") == "EXCHANGE_REJECTED"
-    assert body.get("data", {}).get("retryable") is False
+    # ApiResponse 格式：{success, data, error: {code, message, details}, request_id}
+    assert body["success"] is False
+    assert body["error"]["code"] == "SUBMISSION_FAILED"
+    assert body["error"]["details"]["error_code"] == "EXCHANGE_REJECTED"
+    assert body["error"]["details"]["retryable"] is False
 
     fresh_plan = await db_session.get(TradePlan, plan_id)
     assert fresh_plan.status == PlanStatus.FAILED.value
@@ -204,8 +206,10 @@ async def test_execute_plan_rejects_kill_switch(client, db_session):
 
     assert resp.status_code == 409, resp.text
     body = resp.json()
-    assert body.get("code") == "EXECUTION_DISABLED"
-    assert "Kill Switch" in str(body)
+    # ApiResponse 格式：{success, data, error: {code, message, details}, request_id}
+    assert body["success"] is False
+    assert body["error"]["code"] == "EXECUTION_DISABLED"
+    assert "Kill Switch" in body["error"]["message"]
 
     fresh_plan = await db_session.get(TradePlan, plan_id)
     assert fresh_plan.status == PlanStatus.READY_FOR_CONFIRMATION.value
