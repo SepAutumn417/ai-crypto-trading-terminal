@@ -5,6 +5,7 @@ import { api, KlineInterval } from '@/lib/api';
 import { KlineChart } from '@/components/market/KlineChart';
 import { Orderbook } from '@/components/market/Orderbook';
 import { TickerInfo } from '@/components/market/TickerInfo';
+import { StructurePanel } from '@/components/market/StructurePanel';
 import { useTickerWebSocket } from '@/lib/useWebSocket';
 import type { Ticker } from '@/lib/api';
 
@@ -38,6 +39,13 @@ export default function MarketPage() {
     queryKey: ['orderbook', symbol],
     queryFn: () => api.getOrderbook(symbol, 20),
     refetchInterval: 2000,
+  });
+
+  // v0.3: 市场结构识别
+  const { data: structure } = useQuery({
+    queryKey: ['marketStructure', symbol, interval],
+    queryFn: () => api.getMarketStructure(symbol, interval, 200),
+    refetchInterval: 30000, // 30s 刷新结构
   });
 
   // 实时 ticker 推送：用 updater 形式避免闭包陈旧（P1-15）
@@ -118,7 +126,8 @@ export default function MarketPage() {
             <KlineChart data={klines} height={450} />
           </div>
         </div>
-        <div>
+        <div className="space-y-4">
+          <StructurePanel snapshot={structure ?? null} />
           <Orderbook data={orderbook || null} />
         </div>
       </div>

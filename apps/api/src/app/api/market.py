@@ -72,3 +72,29 @@ async def get_orderbook(
         "asks": [{"price": str(a.price), "quantity": str(a.quantity)} for a in ob.asks],
         "timestamp": ob.timestamp.isoformat() if ob.timestamp else None,
     }).model_dump()
+
+
+@router.get("/structure")
+async def get_market_structure(
+    symbol: str = Query(..., description="交易对，如 BTCUSDT"),
+    interval: KlineInterval = Query(default=KlineInterval.ONE_HOUR, description="K线周期"),
+    limit: int = Query(default=200, ge=50, le=1000, description="K线数量"),
+    swing_left: int = Query(default=2, ge=1, le=10, description="Swing 检测左侧确认K线数"),
+    swing_right: int = Query(default=2, ge=1, le=10, description="Swing 检测右侧确认K线数"),
+) -> dict:
+    """v0.3: 市场结构识别——分析 K 线并返回结构快照。
+
+    返回 swing high/low、BOS/CHOCH 事件、支撑压力区、市场状态等。
+    """
+    from market_structure import analyze_structure
+
+    exchange = _get_exchange()
+    klines = await exchange.get_klines(symbol, interval, limit=limit)
+    snapshot = analyze_structure(
+        klines,
+        symbol=symbol,
+        timeframe=interval.value,
+        swing_left=swing_left,
+        swing_right=swing_right,
+    )
+    return ApiResponse.ok(snapshot.model_dump(mode="json")).model_dump()

@@ -13,6 +13,7 @@ members = [
     "packages/config-versioning",
     "packages/exchange-adapter",
     "packages/ai-evaluator",
+    "packages/market-structure",
     "apps/api",
 ]
 

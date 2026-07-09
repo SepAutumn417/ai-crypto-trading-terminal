@@ -226,6 +226,71 @@ export interface Kline {
   quote_volume: string | null;
 }
 
+// v0.3: 市场结构识别类型
+export interface SwingPoint {
+  id: string;
+  type: 'high' | 'low';
+  index: number;
+  price: string;
+  timestamp: string;
+  confirmed: boolean;
+  structure_label: string | null;
+}
+
+export interface BosEvent {
+  id: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  broken_swing_id: string;
+  broken_price: string;
+  break_index: number;
+  break_timestamp: string;
+  close_price: string;
+}
+
+export interface ChochEvent {
+  id: string;
+  direction: 'bullish' | 'bearish' | 'neutral';
+  broken_swing_id: string;
+  broken_price: string;
+  break_index: number;
+  break_timestamp: string;
+  close_price: string;
+}
+
+export interface PriceZone {
+  id: string;
+  zone_type: 'support' | 'resistance' | 'no_trade';
+  upper: string;
+  lower: string;
+  midpoint: string;
+  strength: number;
+  swing_ids: string[];
+  formed_at: string | null;
+  last_tested_at: string | null;
+}
+
+export interface MarketStructureSnapshot {
+  id: string;
+  symbol: string;
+  timeframe: string;
+  captured_at: string;
+  kline_count: number;
+  kline_start: string | null;
+  kline_end: string | null;
+  market_state: 'trend' | 'range' | 'transition';
+  trend_direction: 'bullish' | 'bearish' | 'neutral';
+  swing_highs: SwingPoint[];
+  swing_lows: SwingPoint[];
+  bos_events: BosEvent[];
+  choch_events: ChochEvent[];
+  support_zones: PriceZone[];
+  resistance_zones: PriceZone[];
+  no_trade_zones: PriceZone[];
+  volatility_state: 'low' | 'normal' | 'high';
+  last_price: string | null;
+  config: Record<string, unknown>;
+}
+
 export interface OrderbookLevel {
   price: string;
   quantity: string;
@@ -330,6 +395,8 @@ export const api = {
     request<Kline[]>(`/api/market/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`),
   getOrderbook: (symbol: string, limit: number = 20) =>
     request<Orderbook>(`/api/market/orderbook?symbol=${encodeURIComponent(symbol)}&limit=${limit}`),
+  getMarketStructure: (symbol: string, interval: KlineInterval = '1h', limit: number = 200) =>
+    request<MarketStructureSnapshot>(`/api/market/structure?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`),
   getJournals: (params?: { page?: number; page_size?: number; symbol?: string; status?: string }) => {
     const qs = new URLSearchParams();
     if (params?.page) qs.set('page', String(params.page));
