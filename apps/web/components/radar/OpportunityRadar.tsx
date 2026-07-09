@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type CandidatePlan, type KlineInterval } from '@/lib/api';
+import { api, type CandidatePlan, type KlineInterval, type ScanResult } from '@/lib/api';
+import { useWebSocketInvalidation } from '@/lib/useWebSocket';
 
 const SYMBOLS = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'BNBUSDT', 'XRPUSDT'];
 const INTERVALS: { label: string; value: KlineInterval }[] = [
@@ -48,18 +49,34 @@ export function OpportunityRadar() {
   const [promoteTarget, setPromoteTarget] = useState<CandidatePlan | null>(null);
   const qc = useQueryClient();
 
-  const { data: scanResult, isLoading: scanning, error: scanError, mutate: scan } = useMutation({
-    mutationFn: () => api.scanCandidates(symbol, interval, 200),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['candidates'] });
-    },
-  });
+  // P1-14: scanResult 仅在扫描后短暂展示，刷新页面/切换 symbol 时清空，避免遮蔽 candidateList
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
-  const { data: candidateList, isLoading: listLoading } = useQuery({
+  // P1-13: 订阅 auto-plans WebSocket 频道，实时刷新候选列表
+  useWebSocketInvalidation('auto-plans', ['candidates']);
+
+  const { data: candidateList, isLoading: listLoading, error: listError } = useQuery({
     queryKey: ['candidates', gradeFilter],
     queryFn: () => api.listCandidates(gradeFilter ? { grade: gradeFilter, limit: 100 } : { limit: 100 }),
     refetchInterval: 30000,
   });
+
+  const handleScan = async () => {
+    setScanning(true);
+    setScanError(null);
+    try {
+      const result = await api.scanCandidates(symbol, interval, 200);
+      setScanResult(result);
+      qc.invalidateQueries({ queryKey: ['candidates'] });
+    } catch (e) {
+      setScanError((e as Error).message);
+      setScanResult(null);
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const { mutate: promote, isPending: promoting } = useMutation({
     mutationFn: ({ id, input }: { id: string; input: { leverage: string; risk_percent: string; equity: string; margin_mode: string } }) =>
@@ -71,6 +88,7 @@ export function OpportunityRadar() {
     },
   });
 
+  // P1-14: 优先展示 scanResult（刚扫描的结果），否则展示 candidateList（实时列表）
   const candidates = scanResult?.candidates ?? candidateList?.items ?? [];
 
   return (
@@ -106,7 +124,7 @@ export function OpportunityRadar() {
             ))}
           </div>
           <button
-            onClick={() => scan()}
+            onClick={handleScan}
             disabled={scanning}
             className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -119,10 +137,13 @@ export function OpportunityRadar() {
             <span>市场状态：<span className="text-white">{scanResult.market_state}</span></span>
             <span>趋势方向：<span className="text-white">{scanResult.trend_direction}</span></span>
             <span>发现候选：<span className="text-white">{scanResult.total}</span></span>
+            {(scanResult.skipped_duplicates ?? 0) > 0 && (
+              <span>去重跳过：<span className="text-yellow-400">{scanResult.skipped_duplicates}</span></span>
+            )}
           </div>
         )}
         {scanError && (
-          <p className="mt-2 text-red-400 text-sm">扫描失败：{(scanError as Error).message}</p>
+          <p className="mt-2 text-red-400 text-sm">扫描失败：{scanError}</p>
         )}
       </div>
 
@@ -146,6 +167,9 @@ export function OpportunityRadar() {
       <div className="space-y-3">
         {listLoading && candidates.length === 0 && (
           <p className="text-gray-400 text-sm">加载中...</p>
+        )}
+        {listError && (
+          <p className="text-red-400 text-sm">候选列表加载失败：{(listError as Error).message}</p>
         )}
         {candidates.length === 0 && !listLoading && (
           <div className="bg-gray-900 rounded-lg p-8 text-center text-gray-500">

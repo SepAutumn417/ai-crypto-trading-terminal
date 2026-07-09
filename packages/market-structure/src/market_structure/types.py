@@ -152,7 +152,7 @@ class StructureSnapshot(BaseModel):
             "resistance_zones": [z.model_dump(mode="json") for z in self.resistance_zones],
             "no_trade_zones": [z.model_dump(mode="json") for z in self.no_trade_zones],
             "volatility_state": self.volatility_state,
-            "last_price": str(self.last_price) if self.last_price else None,
+            "last_price": str(self.last_price) if self.last_price is not None else None,
             "kline_count": self.kline_count,
             "kline_start": self.kline_start.isoformat() if self.kline_start else None,
             "kline_end": self.kline_end.isoformat() if self.kline_end else None,

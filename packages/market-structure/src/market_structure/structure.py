@@ -51,19 +51,19 @@ def detect_bos_choch(
     last_swing_high: SwingPoint | None = None
     last_swing_low: SwingPoint | None = None
 
-    # 按 K 线位置遍历，遇到 swing 点时更新 last_swing，遇到突破时记录事件
-    swing_by_index: dict[int, SwingPoint] = {s.index: s for s in swings}
+    # P1-10: 按 K 线位置分组 swing 点——同一 K 线可能同时是 swing high 和 low
+    swings_at_index: dict[int, list[SwingPoint]] = {}
+    for s in swings:
+        swings_at_index.setdefault(s.index, []).append(s)
 
     for i, k in enumerate(klines):
-        # 先检查是否有 swing 点在此位置（用收盘前的高/低与 swing 价对比）
-        # 注意：swing 的确认需要 right_bars 根 K 线，所以突破检测从第一个 swing 之后开始
-        if i in swing_by_index:
-            sw = swing_by_index[i]
-            if sw.type == SwingType.HIGH:
-                last_swing_high = sw
-            else:
-                last_swing_low = sw
-            continue
+        # P1-9: 先更新当前位置的 swing 点（不再 continue 跳过突破检测）
+        if i in swings_at_index:
+            for sw in swings_at_index[i]:
+                if sw.type == SwingType.HIGH:
+                    last_swing_high = sw
+                else:
+                    last_swing_low = sw
 
         # 检查收盘价是否突破 last_swing_high（bullish）或 last_swing_low（bearish）
         close = k.close

@@ -68,7 +68,17 @@ function SwingList({ swings, label }: { swings: SwingPoint[]; label: string }) {
   );
 }
 
-export function StructurePanel({ snapshot }: { snapshot: MarketStructureSnapshot | null }) {
+export function StructurePanel({ snapshot, isError }: { snapshot: MarketStructureSnapshot | null; isError?: boolean }) {
+  // P1-15: 错误状态处理
+  if (isError) {
+    return (
+      <div className="p-4 border border-gray-800 rounded">
+        <h3 className="text-lg font-bold mb-2">市场结构</h3>
+        <p className="text-red-400 text-sm">结构数据加载失败</p>
+      </div>
+    );
+  }
+
   if (!snapshot) {
     return (
       <div className="p-4 border border-gray-800 rounded">

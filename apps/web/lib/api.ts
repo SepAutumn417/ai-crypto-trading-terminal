@@ -123,6 +123,7 @@ export interface TradePlan {
   setup_type: string | null;
   notes: string | null;
   status: string;
+  candidate_plan_id: string | null;
   risk_config_version: string | null;
   strategy_config_version: string | null;
   user_trading_config_version: string | null;
@@ -322,11 +323,14 @@ export interface ScanResult {
   trend_direction: string;
   candidates: CandidatePlan[];
   total: number;
+  skipped_duplicates?: number;
 }
 
 export interface CandidateListResponse {
   items: CandidatePlan[];
   total: number;
+  page: number;
+  page_size: number;
 }
 
 export interface OrderbookLevel {

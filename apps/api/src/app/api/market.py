@@ -1,9 +1,14 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 from typing import Optional
+import logging
 
 from app.response import ApiResponse
+from app.db import get_db
+from app.models.market_structure_snapshot import MarketStructureSnapshotModel
 from exchange_adapter import BitgetExchange, MockExchange, KlineInterval
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/market", tags=["market"])
 
@@ -81,10 +86,12 @@ async def get_market_structure(
     limit: int = Query(default=200, ge=50, le=1000, description="K线数量"),
     swing_left: int = Query(default=2, ge=1, le=10, description="Swing 检测左侧确认K线数"),
     swing_right: int = Query(default=2, ge=1, le=10, description="Swing 检测右侧确认K线数"),
+    db=Depends(get_db),
 ) -> dict:
     """v0.3: 市场结构识别——分析 K 线并返回结构快照。
 
     返回 swing high/low、BOS/CHOCH 事件、支撑压力区、市场状态等。
+    P1-11: 持久化快照到数据库。
     """
     from market_structure import analyze_structure
 
@@ -97,4 +104,34 @@ async def get_market_structure(
         swing_left=swing_left,
         swing_right=swing_right,
     )
+
+    # P1-11: 持久化结构快照到数据库
+    try:
+        model = MarketStructureSnapshotModel(
+            id=snapshot.id,
+            symbol=snapshot.symbol,
+            timeframe=snapshot.timeframe,
+            captured_at=snapshot.captured_at,
+            market_state=snapshot.market_state.value,
+            trend_direction=snapshot.trend_direction.value,
+            swing_highs=[s.model_dump(mode="json") for s in snapshot.swing_highs],
+            swing_lows=[s.model_dump(mode="json") for s in snapshot.swing_lows],
+            bos_events=[e.model_dump(mode="json") for e in snapshot.bos_events],
+            choch_events=[e.model_dump(mode="json") for e in snapshot.choch_events],
+            support_zones=[z.model_dump(mode="json") for z in snapshot.support_zones],
+            resistance_zones=[z.model_dump(mode="json") for z in snapshot.resistance_zones],
+            no_trade_zones=[z.model_dump(mode="json") for z in snapshot.no_trade_zones],
+            volatility_state=snapshot.volatility_state,
+            last_price=snapshot.last_price,
+            kline_count=snapshot.kline_count,
+            kline_start=snapshot.kline_start,
+            kline_end=snapshot.kline_end,
+            config=snapshot.config,
+        )
+        db.add(model)
+        await db.commit()
+    except Exception:
+        logger.debug("get_market_structure: persist snapshot failed", exc_info=True)
+        await db.rollback()
+
     return ApiResponse.ok(snapshot.model_dump(mode="json")).model_dump()

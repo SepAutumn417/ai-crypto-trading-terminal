@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,7 +13,9 @@ class TradePlan(Base):
     __tablename__ = "trade_plans"
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
-    candidate_plan_id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), nullable=True)
+    candidate_plan_id: Mapped[UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("candidate_plans.id"), nullable=True
+    )
     exchange: Mapped[str] = mapped_column(String(32), nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
     direction: Mapped[str] = mapped_column(String(16), nullable=False)

@@ -42,7 +42,7 @@ export default function MarketPage() {
   });
 
   // v0.3: 市场结构识别
-  const { data: structure } = useQuery({
+  const { data: structure, isError: structureError } = useQuery({
     queryKey: ['marketStructure', symbol, interval],
     queryFn: () => api.getMarketStructure(symbol, interval, 200),
     refetchInterval: 30000, // 30s 刷新结构
@@ -127,7 +127,7 @@ export default function MarketPage() {
           </div>
         </div>
         <div className="space-y-4">
-          <StructurePanel snapshot={structure ?? null} />
+          <StructurePanel snapshot={structure ?? null} isError={structureError} />
           <Orderbook data={orderbook || null} />
         </div>
       </div>

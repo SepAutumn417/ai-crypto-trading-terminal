@@ -394,6 +394,8 @@ async def sync_order_status(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
         model.average_fill_price = order.average_fill_price
         model.execution_error = None
         model.execution_error_code = None
+        model.execution_retryable = None
+        model.execution_retry_after_seconds = None
 
         # 订单状态变为 FILLED 时自动创建交易日志
         if prev_status != PlanStatus.FILLED.value and model.status == PlanStatus.FILLED.value:
@@ -456,6 +458,8 @@ async def cancel_plan_order(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
         model.status = PlanStatus.CANCELLED.value
         model.execution_error = None
         model.execution_error_code = None
+        model.execution_retryable = None
+        model.execution_retry_after_seconds = None
         await db.commit()
         await db.refresh(model)
     except Exception as e:

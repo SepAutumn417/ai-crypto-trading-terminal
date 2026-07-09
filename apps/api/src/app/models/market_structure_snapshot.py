@@ -31,30 +31,30 @@ class MarketStructureSnapshotModel(Base):
     captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     # 市场状态
-    market_state: Mapped[str] = mapped_column(String(32), nullable=False)  # trend / range / transition
-    trend_direction: Mapped[str] = mapped_column(String(32), nullable=False)  # bullish / bearish / neutral
+    market_state: Mapped[str] = mapped_column(String(32), nullable=False)
+    trend_direction: Mapped[str] = mapped_column(String(32), nullable=False)
 
-    # 结构元素（JSONB）
-    swing_highs: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    swing_lows: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    bos_events: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    choch_events: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    support_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    resistance_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    no_trade_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # 结构元素（JSONB）—— P1-18: 补 server_default
+    swing_highs: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    swing_lows: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    bos_events: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    choch_events: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    support_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    resistance_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
+    no_trade_zones: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
 
     # 波动率
-    volatility_state: Mapped[str] = mapped_column(String(16), nullable=False, default="normal")
+    volatility_state: Mapped[str] = mapped_column(String(16), nullable=False, default="normal", server_default="normal")
 
     # 最新价格
     last_price: Mapped[Decimal | None] = mapped_column(Numeric(20, 8), nullable=True)
 
     # 分析输入信息
-    kline_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    kline_count: Mapped[int] = mapped_column(nullable=False, default=0, server_default="0")
     kline_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     kline_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # 算法参数
-    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    config: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

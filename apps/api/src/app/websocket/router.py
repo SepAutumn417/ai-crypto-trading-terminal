@@ -9,7 +9,7 @@
 6. 服务端主动 ping（P1-11），客户端收到后应发送 {"action": "pong"} 更新存活时间
 7. 服务端推送：{"channel":"system","type":"status_update","data":{...},"timestamp":"..."}
 
-支持频道：system, ticker.{SYMBOL}, orderbook.{SYMBOL}, plans, journals
+支持频道：system, ticker.{SYMBOL}, orderbook.{SYMBOL}, plans, journals, auto-plans
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-VALID_CHANNELS = {"system", "plans", "journals"}
+VALID_CHANNELS = {"system", "plans", "journals", "auto-plans"}
 VALID_PREFIXES = ("ticker.", "orderbook.")
 
 

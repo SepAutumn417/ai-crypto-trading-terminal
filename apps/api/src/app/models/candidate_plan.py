@@ -31,29 +31,30 @@ class CandidatePlanModel(Base):
     structure_snapshot_id: Mapped[UUID | None] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("market_structure_snapshots.id"), nullable=True
     )
-    exchange: Mapped[str] = mapped_column(String(32), nullable=False, default="bitget")
+    exchange: Mapped[str] = mapped_column(String(32), nullable=False, default="bitget", server_default="bitget")
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
-    timeframe: Mapped[str] = mapped_column(String(16), nullable=False, default="1h")
+    timeframe: Mapped[str] = mapped_column(String(16), nullable=False, default="1h", server_default="1h")
     direction: Mapped[str] = mapped_column(String(16), nullable=False)  # long / short
     setup_type: Mapped[str] = mapped_column(String(64), nullable=False)
 
     # 入场区域（JSONB: {upper, lower}）
-    entry_zone: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    # P1-17: 补 default 避免 NOT NULL 违约
+    entry_zone: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
     entry_price: Mapped[Decimal | None] = mapped_column(Numeric(20, 8), nullable=True)
     stop_loss_price: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
-    take_profit_prices: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    take_profit_prices: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default="[]")
     risk_reward_ratio: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)
 
     # 机会评级
-    opportunity_grade: Mapped[str] = mapped_column(String(16), nullable=False, default="C")
+    opportunity_grade: Mapped[str] = mapped_column(String(16), nullable=False, default="C", server_default="C")
 
     # 状态机
-    status: Mapped[str] = mapped_column(String(32), nullable=False, default="DISCOVERED")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="DISCOVERED", server_default="DISCOVERED")
     invalidation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 生成依据
-    rationale: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    structure_signals: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    rationale: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    structure_signals: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default="{}")
 
     # 配置版本
     strategy_config_version: Mapped[str | None] = mapped_column(String(64), nullable=True)

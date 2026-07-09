@@ -41,6 +41,7 @@ class TradePlan(BaseModel):
     setup_type: str | None
     notes: str | None
     status: PlanStatus
+    candidate_plan_id: UUID | None = None
     risk_config_version: str | None = None
     strategy_config_version: str | None = None
     user_trading_config_version: str | None = None
