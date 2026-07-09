@@ -10,10 +10,11 @@ from app.models.user_settings import UserSettings
 from app.models.account_risk_state import AccountRiskState
 from app.models.trade_journal import TradeJournal
 from app.models.market_structure_snapshot import MarketStructureSnapshotModel
+from app.models.candidate_plan import CandidatePlanModel
 
 __all__ = [
     "Base", "TradePlan", "PositionSizingResult", "RiskCheck",
     "DecisionGateResult", "AIEvaluationResultModel", "ConfigVersionModel",
     "SystemEvent", "UserSettings", "AccountRiskState", "TradeJournal",
-    "MarketStructureSnapshotModel",
+    "MarketStructureSnapshotModel", "CandidatePlanModel",
 ]

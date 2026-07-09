@@ -14,6 +14,7 @@ members = [
     "packages/exchange-adapter",
     "packages/ai-evaluator",
     "packages/market-structure",
+    "packages/auto-plan-engine",
     "apps/api",
 ]
 

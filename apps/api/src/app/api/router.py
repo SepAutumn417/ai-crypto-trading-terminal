@@ -6,6 +6,7 @@ from app.api.risk import router as risk_router
 from app.api.market import router as market_router
 from app.api.journals import router as journals_router
 from app.api.ai import router as ai_router
+from app.api.auto_plans import router as auto_plans_router
 
 api_router = APIRouter()
 api_router.include_router(system_router)
@@ -15,3 +16,4 @@ api_router.include_router(risk_router)
 api_router.include_router(market_router)
 api_router.include_router(journals_router)
 api_router.include_router(ai_router)
+api_router.include_router(auto_plans_router)

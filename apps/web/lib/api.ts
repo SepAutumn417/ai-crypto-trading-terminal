@@ -291,6 +291,44 @@ export interface MarketStructureSnapshot {
   config: Record<string, unknown>;
 }
 
+// v0.4: 候选计划类型
+export interface CandidatePlan {
+  id: string;
+  structure_snapshot_id: string | null;
+  exchange: string;
+  symbol: string;
+  timeframe: string;
+  direction: 'long' | 'short';
+  setup_type: string;
+  entry_zone: { upper: string; lower: string };
+  entry_price: string | null;
+  stop_loss_price: string;
+  take_profit_prices: string[];
+  risk_reward_ratio: string | null;
+  opportunity_grade: string;
+  status: string;
+  invalidation_reason: string | null;
+  rationale: string;
+  structure_signals: Record<string, unknown>;
+  strategy_config_version: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScanResult {
+  symbol: string;
+  timeframe: string;
+  market_state: string;
+  trend_direction: string;
+  candidates: CandidatePlan[];
+  total: number;
+}
+
+export interface CandidateListResponse {
+  items: CandidatePlan[];
+  total: number;
+}
+
 export interface OrderbookLevel {
   price: string;
   quantity: string;
@@ -430,4 +468,30 @@ export const api = {
     if (params.limit) qs.set('limit', String(params.limit));
     return request<AIEvaluationResult>(`/api/ai/evaluate?${qs.toString()}`);
   },
+  scanCandidates: (symbol: string, interval: KlineInterval = '1h', limit: number = 200) => {
+    const qs = new URLSearchParams();
+    qs.set('symbol', symbol);
+    qs.set('interval', interval);
+    qs.set('limit', String(limit));
+    return request<ScanResult>(`/api/auto-plans/scan?${qs.toString()}`, { method: 'POST' });
+  },
+  listCandidates: (params?: { status?: string; symbol?: string; grade?: string; limit?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.symbol) qs.set('symbol', params.symbol);
+    if (params?.grade) qs.set('grade', params.grade);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    return request<CandidateListResponse>(`/api/auto-plans?${qs.toString()}`);
+  },
+  getCandidate: (id: string) => request<CandidatePlan>(`/api/auto-plans/${id}`),
+  promoteCandidate: (id: string, input: {
+    leverage: string;
+    risk_percent: string;
+    equity: string;
+    margin_mode?: string;
+    notes?: string;
+  }) => request<{ candidate_id: string; trade_plan_id: string; status: string; message: string }>(
+    `/api/auto-plans/${id}/promote`,
+    { method: 'POST', body: JSON.stringify(input) },
+  ),
 };
