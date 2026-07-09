@@ -154,5 +154,9 @@ class Exchange(ABC):
 
     @abstractmethod
     async def set_margin_mode(self, symbol: str, margin_mode: str) -> None:
-        """设置保证金模式（isolated / cross）。"""
+        """设置保证金模式。
+
+        接受 "isolated"、"cross"、"crossed" 三种取值，
+        实现层应统一映射为交易所要求的格式（如 Bitget 要求 "crossed"）。
+        """
         ...

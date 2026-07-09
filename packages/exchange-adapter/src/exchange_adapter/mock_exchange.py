@@ -230,5 +230,7 @@ class MockExchange(Exchange):
             raise ValueError(f"Invalid leverage: {leverage}")
 
     async def set_margin_mode(self, symbol: str, margin_mode: str) -> None:
-        if margin_mode not in ("isolated", "cross"):
+        # P1-1: 统一接受 cross/crossed/isolated 三种取值
+        normalized = margin_mode.lower()
+        if normalized not in ("isolated", "cross", "crossed"):
             raise ValueError(f"Invalid margin mode: {margin_mode}")

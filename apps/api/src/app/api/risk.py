@@ -76,11 +76,15 @@ async def risk_check_endpoint(
     exec_enabled = user_settings.execution_enabled if user_settings else False
     kill_sw = user_settings.kill_switch if user_settings else True
 
+    # P1-26: 获取真实的 exchange / db 连接状态，替代硬编码
+    from app.services.execution_service import check_system_health
+    exchange_connected, db_healthy = await check_system_health(db, symbol=body.plan.symbol)
+
     risk = risk_check(
         sizing_result=sizing, risk_config=risk_config, execution_config=execution_config,
         opportunity_grade_config=grade_config, account_risk_state=account_state,
         plan=plan_input, execution_enabled=exec_enabled, kill_switch=kill_sw,
-        exchange_connected=False, db_healthy=True,
+        exchange_connected=exchange_connected, db_healthy=db_healthy,
     )
 
     return ApiResponse.ok({

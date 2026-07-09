@@ -61,7 +61,7 @@ def _evaluate_rsi(closes: List[Decimal], direction: str, weight: Decimal = DEFAU
             score = Decimal("75")
             explanation = f"RSI={current_rsi:.1f}，偏低，对做多有利"
         elif current_rsi < Decimal("60"):
-            score = Decimal("60")
+            score = Decimal("50")
             explanation = f"RSI={current_rsi:.1f}，处于中性区间"
         elif current_rsi < Decimal("70"):
             score = Decimal("40")
@@ -77,7 +77,7 @@ def _evaluate_rsi(closes: List[Decimal], direction: str, weight: Decimal = DEFAU
             score = Decimal("75")
             explanation = f"RSI={current_rsi:.1f}，偏高，对做空有利"
         elif current_rsi > Decimal("40"):
-            score = Decimal("60")
+            score = Decimal("50")
             explanation = f"RSI={current_rsi:.1f}，处于中性区间"
         elif current_rsi > Decimal("30"):
             score = Decimal("40")
@@ -375,6 +375,19 @@ def evaluate_trade(
         weighted_score = sum(s.score for s in signals) / Decimal(len(signals)) if signals else Decimal("0")
     else:
         weighted_score = sum(s.score * s.weight for s in signals) / total_weight
+
+    # P1-18: 利用 entry_price 与最新收盘价对比，调整评分
+    # 做多时入场价低于当前价（买在低位）加分，高于当前价减分；做空反之
+    if closes and entry_price > 0:
+        current_price = closes[-1]
+        deviation = (entry_price - current_price) / current_price
+        if direction == "LONG":
+            # 做多：入场价低于当前价 = 好入场点，加分（最多 ±5）
+            price_adjustment = max(Decimal("-5"), min(Decimal("5"), -deviation * Decimal("100")))
+        else:
+            # 做空：入场价高于当前价 = 好入场点，加分
+            price_adjustment = max(Decimal("-5"), min(Decimal("5"), deviation * Decimal("100")))
+        weighted_score = max(Decimal("0"), min(Decimal("100"), weighted_score + price_adjustment))
 
     if weighted_score >= Decimal("75"):
         grade = EvaluationGrade.A

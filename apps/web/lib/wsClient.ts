@@ -142,7 +142,17 @@ class WsClient {
   }
 
   private dispatch(msg: WSMessage): void {
-    if (msg.channel === '_meta') return;
+    // P1-14: 不再静默丢弃 _meta 消息，处理 error/connected/ping 等类型
+    if (msg.channel === '_meta') {
+      if (msg.type === 'error') {
+        console.error('WS error:', msg.data?.error || msg.data);
+      } else if (msg.type === 'ping') {
+        // 服务端心跳 ping，回复 pong
+        this._send({ action: 'pong' });
+      }
+      // connected/subscribed/unsubscribed/pong 等确认消息静默处理
+      return;
+    }
     const handlers = this.subscriptions.get(msg.channel);
     if (handlers) {
       handlers.forEach((h) => {

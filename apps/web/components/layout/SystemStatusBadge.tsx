@@ -8,8 +8,8 @@ export function SystemStatusBadge() {
   const { data: status } = useQuery({
     queryKey: ['systemStatus'],
     queryFn: () => api.getSystemStatus(),
-    // WebSocket 接收到 system 频道推送时会 invalidate，无需轮询
-    refetchInterval: false,
+    // P1-17: WS 推送时 invalidate，同时保留 HTTP 兜底轮询防止 WS 断开期间数据过期
+    refetchInterval: 10000,
   });
   // 订阅 system 频道，收到状态变更时刷新
   useWebSocketInvalidation('system', ['systemStatus']);

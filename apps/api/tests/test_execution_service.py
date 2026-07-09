@@ -215,3 +215,212 @@ async def test_execute_plan_rejects_kill_switch(client, db_session):
     assert fresh_plan.status == PlanStatus.READY_FOR_CONFIRMATION.value
     assert fresh_plan.execution_error is None
     fake_exchange.place_order.assert_not_called()
+
+
+# ========================================================================
+# P1-27: sync_order_status / cancel_plan_order 测试矩阵
+# ========================================================================
+
+
+def _make_submitted_plan_kwargs(plan_id: UUID | None = None, **overrides) -> dict:
+    """生成已提交（SUBMITTED）状态的 plan，带 exchange_order_id。"""
+    base = _make_plan_kwargs(
+        plan_id=plan_id,
+        status=PlanStatus.SUBMITTED.value,
+        client_order_id=f"{plan_id.hex[:16]}-1" if plan_id else "test-1",
+        exchange_order_id="bitget-order-001",
+        execution_attempts=1,
+    )
+    base.update(overrides)
+    return base
+
+
+def _make_fake_order(
+    status_value: str = "filled",
+    filled_quantity: str = "0.5",
+    average_fill_price: str | None = "62500",
+) -> MagicMock:
+    """构造 exchange.get_order 返回的 Order mock。"""
+    order = MagicMock()
+    order.id = "bitget-order-001"
+    order.status = MagicMock()
+    order.status.value = status_value
+    order.filled_quantity = Decimal(filled_quantity)
+    order.average_fill_price = Decimal(average_fill_price) if average_fill_price else None
+    return order
+
+
+@pytest.mark.asyncio
+async def test_sync_order_status_filled(client, db_session):
+    """sync 正常成交：SUBMITTED → FILLED，filled_quantity/average_fill_price 更新，自动创建 journal。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.get_order = AsyncMock(return_value=_make_fake_order(
+        status_value="filled", filled_quantity="0.5", average_fill_price="62500",
+    ))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/sync")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+    assert body["status"] == PlanStatus.FILLED.value
+    assert body["filled_quantity"] == "0.5"
+    assert body["average_fill_price"] == "62500"
+    fake_exchange.get_order.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_sync_order_status_partially_filled(client, db_session):
+    """sync 部分成交：SUBMITTED → PARTIALLY_FILLED。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.get_order = AsyncMock(return_value=_make_fake_order(
+        status_value="partially_filled", filled_quantity="0.2", average_fill_price="62450",
+    ))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/sync")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+    assert body["status"] == PlanStatus.PARTIALLY_FILLED.value
+    assert body["filled_quantity"] == "0.2"
+
+
+@pytest.mark.asyncio
+async def test_sync_order_still_pending(client, db_session):
+    """sync 订单仍挂：SUBMITTED → SUBMITTED（状态不变，filled_quantity=0）。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.get_order = AsyncMock(return_value=_make_fake_order(
+        status_value="new", filled_quantity="0", average_fill_price=None,
+    ))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/sync")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+    assert body["status"] == PlanStatus.SUBMITTED.value
+
+
+@pytest.mark.asyncio
+async def test_sync_order_rejected(client, db_session):
+    """sync 订单被拒：SUBMITTED → FAILED（REJECTED 映射到 FAILED）。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.get_order = AsyncMock(return_value=_make_fake_order(
+        status_value="rejected", filled_quantity="0", average_fill_price=None,
+    ))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/sync")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+    assert body["status"] == PlanStatus.FAILED.value
+
+
+@pytest.mark.asyncio
+async def test_sync_exchange_error(client, db_session):
+    """sync 交易所异常：get_order 抛异常 → 422，plan 记录 execution_error。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.get_order = AsyncMock(side_effect=ValueError("Bitget API error: connection timeout"))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/sync")
+
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "SUBMISSION_FAILED"
+    assert body["error"]["details"]["error_code"] == "EXCHANGE_NETWORK_ERROR"
+    assert body["error"]["details"]["retryable"] is True
+
+
+@pytest.mark.asyncio
+async def test_cancel_order_success(client, db_session):
+    """cancel 正常：SUBMITTED → CANCELLED。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.cancel_order = AsyncMock(return_value=None)
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/cancel")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()["data"]
+    assert body["status"] == PlanStatus.CANCELLED.value
+    fake_exchange.cancel_order.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_cancel_invalid_state_filled(client, db_session):
+    """cancel 状态不允许：FILLED 状态取消 → 422 报错。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(
+        plan_id=plan_id, status=PlanStatus.FILLED.value,
+    ))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.cancel_order = AsyncMock(side_effect=AssertionError("cancel_order should NOT be called for FILLED plan"))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/cancel")
+
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "SUBMISSION_FAILED"
+    assert body["error"]["details"]["error_code"] == "INVALID_STATE_FOR_CANCEL"
+    fake_exchange.cancel_order.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_cancel_exchange_error(client, db_session):
+    """cancel 交易所异常：cancel_order 抛异常 → 422，plan 记录 execution_error。"""
+    plan_id = uuid4()
+    plan = TradePlan(id=plan_id, **_make_submitted_plan_kwargs(plan_id=plan_id))
+    db_session.add(plan)
+    await db_session.commit()
+
+    fake_exchange = MagicMock()
+    fake_exchange.cancel_order = AsyncMock(side_effect=ValueError("Bitget API error: order not found"))
+
+    with patch.object(execution_service, "_get_exchange", return_value=fake_exchange):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/cancel")
+
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["success"] is False
+    assert body["error"]["code"] == "SUBMISSION_FAILED"
+    assert body["error"]["details"]["error_code"] == "EXCHANGE_REJECTED"
+    assert body["error"]["details"]["retryable"] is False

@@ -40,6 +40,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+# P1-1: 统一 margin_mode 取值，Bitget V2 API 要求 "isolated" 或 "crossed"
+def _normalize_margin_mode(margin_mode: str) -> str:
+    mapping = {"cross": "crossed", "crossed": "crossed", "isolated": "isolated"}
+    result = mapping.get(margin_mode.lower())
+    if result is None:
+        raise ValueError(f"Invalid margin mode: {margin_mode}, must be 'isolated' or 'cross'/'crossed'")
+    return result
+
+
 INTERVAL_MAP = {
     KlineInterval.ONE_MINUTE: "1m",
     KlineInterval.FIVE_MINUTES: "5m",
@@ -163,6 +172,10 @@ class BitgetExchange(Exchange):
             content=body_str if body_str else None,
             headers=headers,
         )
+
+        # P1-5: 处理 429 速率限制
+        if resp.status_code == 429:
+            raise httpx.RemoteProtocolError(f"Bitget rate limit exceeded (429)")
 
         if resp.status_code >= 500:
             raise httpx.RemoteProtocolError(f"Bitget server error: {resp.status_code}")
@@ -294,24 +307,38 @@ class BitgetExchange(Exchange):
         status: Optional[OrderStatus] = None,
         limit: int = 50,
     ) -> list[Order]:
-        if status == OrderStatus.FILLED:
-            endpoint = "/api/v2/mix/order/history-orders"
-        elif status in (OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED):
-            endpoint = "/api/v2/mix/order/current"
-        else:
-            endpoint = "/api/v2/mix/order/history-orders"
-
         params = {
             "symbol": symbol,
             "productType": "usdt-futures",
             "pageSize": str(limit),
         }
-        data = await self._request("GET", endpoint, params=params, is_private=True)
 
-        order_list = data.get("orderList", []) if isinstance(data, dict) else []
         orders: list[Order] = []
-        for item in order_list:
-            orders.append(self._parse_order(item))
+
+        if status is None:
+            # P1-3: status=None 时同时查询当前挂单和历史订单并合并
+            current_data = await self._request("GET", "/api/v2/mix/order/current", params=params, is_private=True)
+            current_list = current_data.get("orderList", []) if isinstance(current_data, dict) else []
+            for item in current_list:
+                orders.append(self._parse_order(item))
+
+            history_data = await self._request("GET", "/api/v2/mix/order/history-orders", params=params, is_private=True)
+            history_list = history_data.get("orderList", []) if isinstance(history_data, dict) else []
+            for item in history_list:
+                orders.append(self._parse_order(item))
+        else:
+            if status == OrderStatus.FILLED:
+                endpoint = "/api/v2/mix/order/history-orders"
+            elif status in (OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED):
+                endpoint = "/api/v2/mix/order/current"
+            else:
+                endpoint = "/api/v2/mix/order/history-orders"
+
+            data = await self._request("GET", endpoint, params=params, is_private=True)
+            order_list = data.get("orderList", []) if isinstance(data, dict) else []
+            for item in order_list:
+                orders.append(self._parse_order(item))
+
         return orders
 
     async def get_order(self, symbol: str, order_id: str) -> Order:
@@ -350,7 +377,7 @@ class BitgetExchange(Exchange):
             status=status,
             price=Decimal(str(item.get("price", "0"))) if item.get("price") else None,
             quantity=Decimal(str(item.get("size", "0"))),
-            filled_quantity=Decimal(str(item.get("baseVolume", "0"))) if item.get("baseVolume") else Decimal("0"),
+            filled_quantity=Decimal(str(item.get("fillSize", item.get("baseVolume", "0")))) if (item.get("fillSize") or item.get("baseVolume")) else Decimal("0"),
             average_fill_price=Decimal(str(item.get("priceAvg", "0"))) if item.get("priceAvg") else None,
             stop_price=Decimal(str(item.get("stopPrice", "0"))) if item.get("stopPrice") else None,
             client_order_id=item.get("clientOid") or None,
@@ -390,8 +417,10 @@ class BitgetExchange(Exchange):
         preset_take_stop = {}
         if take_profit_price is not None:
             preset_take_stop["takeProfitPrice"] = str(take_profit_price)
+            preset_take_stop["takeProfitType"] = "2"  # 限价止盈
         if stop_loss_price is not None:
             preset_take_stop["stopLossPrice"] = str(stop_loss_price)
+            preset_take_stop["stopLossType"] = "2"  # 限价止损
         if preset_take_stop:
             body["presetTakeProfitStopLoss"] = preset_take_stop
 
@@ -425,19 +454,24 @@ class BitgetExchange(Exchange):
             "orderId": order_id,
             "productType": "usdt-futures",
         }
-        data = await self._request(
+        await self._request(
             "POST", "/api/v2/mix/order/cancel-order",
             body=body,
             is_private=True,
         )
-        return Order(
-            id=data.get("orderId", order_id),
-            symbol=symbol,
-            side=OrderSide.BUY,
-            type=OrderType.LIMIT,
-            status=OrderStatus.CANCELED,
-            quantity=Decimal("0"),
-        )
+        # P1-2: 返回真实订单信息而非硬编码 Order
+        try:
+            return await self.get_order(symbol, order_id)
+        except Exception:
+            # get_order 失败时返回带 CANCELED 状态的兜底 Order
+            return Order(
+                id=order_id,
+                symbol=symbol,
+                side=OrderSide.BUY,
+                type=OrderType.LIMIT,
+                status=OrderStatus.CANCELED,
+                quantity=Decimal("0"),
+            )
 
     async def cancel_all_orders(self, symbol: str) -> list[Order]:
         body = {
@@ -450,17 +484,22 @@ class BitgetExchange(Exchange):
             is_private=True,
         )
         canceled_ids = data.get("orderIds", []) if isinstance(data, dict) else []
-        return [
-            Order(
-                id=oid,
-                symbol=symbol,
-                side=OrderSide.BUY,
-                type=OrderType.LIMIT,
-                status=OrderStatus.CANCELED,
-                quantity=Decimal("0"),
-            )
-            for oid in canceled_ids
-        ]
+        # P1-2: 尝试获取每个订单的真实信息
+        result: list[Order] = []
+        for oid in canceled_ids:
+            try:
+                order = await self.get_order(symbol, oid)
+                result.append(order)
+            except Exception:
+                result.append(Order(
+                    id=oid,
+                    symbol=symbol,
+                    side=OrderSide.BUY,
+                    type=OrderType.LIMIT,
+                    status=OrderStatus.CANCELED,
+                    quantity=Decimal("0"),
+                ))
+        return result
 
     async def set_leverage(self, symbol: str, leverage: int) -> None:
         body = {
@@ -476,10 +515,12 @@ class BitgetExchange(Exchange):
         )
 
     async def set_margin_mode(self, symbol: str, margin_mode: str) -> None:
+        # P1-1: Bitget V2 API 要求 "isolated" 或 "crossed"，统一映射
+        normalized = _normalize_margin_mode(margin_mode)
         body = {
             "symbol": symbol,
             "productType": "usdt-futures",
-            "marginMode": margin_mode,
+            "marginMode": normalized,
         }
         await self._request(
             "POST", "/api/v2/mix/account/set-margin-mode",

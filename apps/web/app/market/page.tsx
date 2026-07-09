@@ -40,21 +40,33 @@ export default function MarketPage() {
     refetchInterval: 2000,
   });
 
-  // 实时 ticker 推送：直接更新 query cache，避免额外 HTTP 请求
+  // 实时 ticker 推送：用 updater 形式避免闭包陈旧（P1-15）
   const qc = useQueryClient();
   useTickerWebSocket(symbol, (data) => {
-    const updated: Ticker = {
-      symbol: data.symbol,
-      last_price: data.last_price,
-      mark_price: data.mark_price || null,
-      index_price: ticker?.index_price || null,
-      high_24h: ticker?.high_24h || null,
-      low_24h: ticker?.low_24h || null,
-      volume_24h: ticker?.volume_24h || null,
-      change_percent_24h: ticker?.change_percent_24h || null,
-      timestamp: data.timestamp || null,
-    };
-    qc.setQueryData(['ticker', symbol], updated);
+    // P1-15: 使用 updater 形式读取 prev，避免闭包捕获过期 ticker
+    qc.setQueryData<Ticker>(['ticker', symbol], (prev) => {
+      if (!prev) {
+        // 首次推送时创建完整对象
+        return {
+          symbol: data.symbol,
+          last_price: data.last_price,
+          mark_price: data.mark_price || null,
+          index_price: null,
+          high_24h: null,
+          low_24h: null,
+          volume_24h: null,
+          change_percent_24h: null,
+          timestamp: data.timestamp || null,
+        };
+      }
+      // 只更新 WS 推送的字段，保留 HTTP 已获取的 24h 数据
+      return {
+        ...prev,
+        last_price: data.last_price,
+        mark_price: data.mark_price || prev.mark_price,
+        timestamp: data.timestamp || prev.timestamp,
+      };
+    });
   });
 
   return (

@@ -12,6 +12,9 @@ export default function JournalPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [filter, setFilter] = useState<{ status?: string; symbol?: string }>({});
+  // P1-29: 分页状态
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const { data: summary, isError: summaryError } = useQuery({
     queryKey: ['journalSummary', filter.symbol],
@@ -19,8 +22,10 @@ export default function JournalPage() {
   });
 
   const { data: listData, isLoading, isError: listError, error } = useQuery({
-    queryKey: ['journals', filter],
-    queryFn: () => api.getJournals({ ...filter, page_size: 50 }),
+    queryKey: ['journals', filter, page],
+    queryFn: () => api.getJournals({ ...filter, page, page_size: pageSize }),
+    // P1-17: WS 断开时 HTTP 兜底轮询
+    refetchInterval: 15000,
   });
 
   const { data: selectedJournal } = useQuery({
@@ -41,7 +46,7 @@ export default function JournalPage() {
         <div className="flex gap-2">
           <select
             value={filter.status || ''}
-            onChange={(e) => setFilter({ ...filter, status: e.target.value || undefined })}
+            onChange={(e) => { setFilter({ ...filter, status: e.target.value || undefined }); setPage(1); }}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm"
           >
             <option value="">全部状态</option>
@@ -50,7 +55,7 @@ export default function JournalPage() {
           </select>
           <select
             value={filter.symbol || ''}
-            onChange={(e) => setFilter({ ...filter, symbol: e.target.value || undefined })}
+            onChange={(e) => { setFilter({ ...filter, symbol: e.target.value || undefined }); setPage(1); }}
             className="bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-sm"
           >
             <option value="">全部交易对</option>
@@ -78,6 +83,34 @@ export default function JournalPage() {
             onSelect={setSelectedId}
             selectedId={selectedId}
           />
+          {(() => {
+            // P1-29: 分页控件
+            const total = listData?.total ?? 0;
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const currentPage = listData?.page ?? page;
+            if (totalPages <= 1) return null;
+            return (
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <button
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed rounded text-sm"
+                >
+                  上一页
+                </button>
+                <span className="text-sm text-gray-400">
+                  {currentPage} / {totalPages} 页（共 {total} 条）
+                </span>
+                <button
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed rounded text-sm"
+                >
+                  下一页
+                </button>
+              </div>
+            );
+          })()}
         </div>
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">

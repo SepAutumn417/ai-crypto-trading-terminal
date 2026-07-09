@@ -71,6 +71,33 @@ def reset_exchange_for_tests() -> None:
     _exchange_instance = None
 
 
+async def check_system_health(db: AsyncSession, symbol: str | None = None) -> tuple[bool, bool]:
+    """P1-26: 获取真实的 exchange / db 连接状态，替代硬编码。
+
+    Returns:
+        (exchange_connected, db_healthy)
+    """
+    # DB 健康：执行 SELECT 1 探活
+    db_healthy = True
+    try:
+        from sqlalchemy import text
+        await db.execute(text("SELECT 1"))
+    except Exception:
+        db_healthy = False
+
+    # Exchange 健康：调用 get_ticker 探活（mock 模式下永远成功）
+    exchange_connected = False
+    try:
+        exchange = _get_exchange()
+        probe_symbol = symbol or "BTCUSDT"
+        await exchange.get_ticker(probe_symbol)
+        exchange_connected = True
+    except Exception:
+        exchange_connected = False
+
+    return exchange_connected, db_healthy
+
+
 def _direction_to_side(direction: Direction) -> OrderSide:
     if direction == Direction.LONG:
         return OrderSide.BUY
@@ -258,7 +285,54 @@ async def execute_plan(db: AsyncSession, plan_id: UUID) -> TradePlanSchema:
         if model.status == PlanStatus.FILLED.value:
             await _auto_create_journal_on_fill(db, model)
 
-        await db.commit()
+        # P1-25: place_order 成功后 db.commit 失败时，尝试 cancel_order 补偿避免孤儿订单
+        try:
+            await db.commit()
+        except Exception as commit_err:
+            logger.error(
+                "execute_plan commit failed after place_order success, compensating "
+                "plan_id=%s exchange_order_id=%s error=%s",
+                plan_id, order.id, commit_err,
+            )
+            await db.rollback()
+            # 订单已在交易所创建但本地未记录，尝试撤回
+            compensated = False
+            try:
+                await exchange.cancel_order(model.symbol, order.id)
+                compensated = True
+                logger.info(
+                    "execute_plan compensation cancel succeeded plan_id=%s order_id=%s",
+                    plan_id, order.id,
+                )
+            except Exception as cancel_err:
+                logger.error(
+                    "execute_plan compensation cancel FAILED — ORPHAN ORDER "
+                    "plan_id=%s order_id=%s error=%s",
+                    plan_id, order.id, cancel_err,
+                )
+            # 标记 FAILED 让用户知道下单失败
+            _mark_failed(
+                model,
+                error_code="COMMIT_FAILED",
+                error_message=f"订单已提交但本地保存失败（补偿撤单={'成功' if compensated else '失败'}）: {commit_err}",
+                retryable=True,
+                retry_after_seconds=30,
+            )
+            model.client_order_id = client_order_id
+            model.execution_attempts = next_attempt
+            try:
+                await db.commit()
+                await db.refresh(model)
+            except Exception:
+                await db.rollback()
+            raise SubmissionFailedException(
+                plan_id=str(plan_id),
+                error_code="COMMIT_FAILED",
+                error_message=f"订单已提交但本地保存失败（补偿撤单={'成功' if compensated else '失败'}）: {commit_err}",
+                retryable=True,
+                retry_after_seconds=30,
+            ) from commit_err
+
         await db.refresh(model)
         logger.info(
             "execute_plan success plan_id=%s exchange_order_id=%s client_order_id=%s",

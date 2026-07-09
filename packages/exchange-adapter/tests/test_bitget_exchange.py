@@ -217,8 +217,10 @@ async def test_place_order(exchange):
 
 @pytest.mark.asyncio
 async def test_cancel_order(exchange):
-    mock_data = {"orderId": "67890"}
-    exchange._request = AsyncMock(return_value=mock_data)
+    # P1-2: cancel_order 现在调用 get_order 返回真实订单，需 mock 两次 _request
+    cancel_resp = {"orderId": "67890"}
+    order_detail = {"orderId": "67890", "state": "canceled", "symbol": "BTCUSDT", "side": "buy", "orderType": "limit"}
+    exchange._request = AsyncMock(side_effect=[cancel_resp, order_detail])
 
     order = await exchange.cancel_order("BTCUSDT", "67890")
     assert order.id == "67890"
@@ -227,8 +229,12 @@ async def test_cancel_order(exchange):
 
 @pytest.mark.asyncio
 async def test_cancel_all_orders(exchange):
-    mock_data = {"orderIds": ["111", "222", "333"]}
-    exchange._request = AsyncMock(return_value=mock_data)
+    # P1-2: cancel_all_orders 对每个 orderId 调用 get_order，需 mock cancel-all + 3 次 detail
+    cancel_resp = {"orderIds": ["111", "222", "333"]}
+    detail_111 = {"orderId": "111", "state": "canceled", "symbol": "BTCUSDT", "side": "buy", "orderType": "limit"}
+    detail_222 = {"orderId": "222", "state": "canceled", "symbol": "BTCUSDT", "side": "sell", "orderType": "limit"}
+    detail_333 = {"orderId": "333", "state": "canceled", "symbol": "BTCUSDT", "side": "buy", "orderType": "limit"}
+    exchange._request = AsyncMock(side_effect=[cancel_resp, detail_111, detail_222, detail_333])
 
     orders = await exchange.cancel_all_orders("BTCUSDT")
     assert len(orders) == 3

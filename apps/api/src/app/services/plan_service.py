@@ -101,11 +101,15 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         symbol_rules=symbol_rule,
     )
 
+    # P1-26: 获取真实的 exchange / db 连接状态，替代硬编码
+    from app.services.execution_service import check_system_health
+    exchange_connected, db_healthy = await check_system_health(db, symbol=model.symbol)
+
     risk = risk_check(
         sizing_result=sizing, risk_config=risk_config, execution_config=execution_config,
         opportunity_grade_config=grade_config, account_risk_state=account_state,
         plan=plan_input, execution_enabled=exec_enabled, kill_switch=kill_sw,
-        exchange_connected=False, db_healthy=True,
+        exchange_connected=exchange_connected, db_healthy=db_healthy,
     )
 
     # AI 评估：拉取 K 线并调用 ai_evaluator，结果落库并参与决策门融合

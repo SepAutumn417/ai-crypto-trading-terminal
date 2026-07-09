@@ -58,21 +58,27 @@ export function PlanDetail({ planId }: { planId: string }) {
     },
   });
 
+  if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
+
+  // P1-23: canExecute 必须同时满足状态在允许集合内 AND decision=ALLOW_CONFIRM，避免 SUBMITTED 误显示
+  const canExecute = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status) && result?.decision.result === 'ALLOW_CONFIRM';
+  // P1-24: result 为 null 但状态允许时，点击按钮自动触发检查
+  const needsCheck = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status) && !result;
+  const canSync = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
+  const canCancel = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
+
   const handleExecute = () => {
-    if (result) {
+    // P1-24: result 存在且 decision 允许时打开确认弹窗；result 为 null 时自动触发检查
+    if (canExecute) {
       setShowConfirm(true);
+    } else if (needsCheck) {
+      checkMut.mutate();
     }
   };
 
   const handleConfirm = () => {
     executeMut.mutate();
   };
-
-  if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
-
-  const canExecute = plan.status === 'READY_FOR_CONFIRMATION' || plan.status === 'FAILED' || result?.decision.result === 'ALLOW_CONFIRM';
-  const canSync = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
-  const canCancel = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
 
   const statusColors: Record<string, string> = {
     DRAFT: 'text-gray-400',
@@ -135,19 +141,19 @@ export function PlanDetail({ planId }: { planId: string }) {
               {checkMut.isPending ? '检查中...' : '运行检查'}
             </button>
           )}
-          {(plan.status === 'READY_FOR_CONFIRMATION' || plan.status === 'FAILED' || (result && canExecute)) && (
+          {(plan.status === 'READY_FOR_CONFIRMATION' || plan.status === 'FAILED') && (
             <button
               onClick={handleExecute}
-              disabled={!canExecute || executeMut.isPending}
+              disabled={(canExecute && executeMut.isPending) || checkMut.isPending}
               className={`px-4 py-2 rounded ${
                 canExecute && !executeMut.isPending
                   ? plan.status === 'FAILED'
                     ? 'bg-orange-600 hover:bg-orange-700'
                     : 'bg-blue-600 hover:bg-blue-700'
-                  : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                  : 'bg-gray-700 hover:bg-gray-600'
               }`}
             >
-              {executeMut.isPending ? '提交中...' : plan.status === 'FAILED' ? '重试执行' : '执行交易'}
+              {executeMut.isPending ? '提交中...' : checkMut.isPending ? '检查中...' : canExecute ? (plan.status === 'FAILED' ? '重试执行' : '执行交易') : '运行检查'}
             </button>
           )}
           {canSync && (

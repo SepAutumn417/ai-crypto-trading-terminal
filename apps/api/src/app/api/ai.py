@@ -6,6 +6,7 @@ from exchange_adapter import KlineInterval
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.exceptions import AppException
 from app.response import ApiResponse
 from app.services.config_service import get_ai_indicator_weights
 from app.services.execution_service import _get_exchange
@@ -26,17 +27,24 @@ async def evaluate_opportunity(
     limit: int = Query(default=100, ge=50, le=500, description="K线数量"),
     db: AsyncSession = Depends(get_db),
 ) -> ApiResponse[AIEvaluationResult]:
-    # 复用 execution_service 的 exchange 单例（MockExchange/BitgetExchange），
-    # 避免每次 new 一个 exchange 实例导致底层 HTTP session 泄漏。
-    exchange = _get_exchange()
-    klines = await exchange.get_klines(symbol, interval, limit=limit)
+    # P1-19: 包裹 try/except，交易所异常返回 503 而非 500
+    try:
+        exchange = _get_exchange()
+        klines = await exchange.get_klines(symbol, interval, limit=limit)
+    except Exception as e:
+        logger.exception("AI 评估：交易所连接失败 symbol=%s", symbol)
+        raise AppException("EXCHANGE_UNAVAILABLE", f"交易所连接失败: {e}", 503) from e
 
-    weights = await get_ai_indicator_weights(db)
-    if weights:
-        logger.info("AI 评估使用配置权重: %s", weights)
-    else:
-        logger.info("AI 评估未读取到配置权重，使用默认权重")
+    try:
+        weights = await get_ai_indicator_weights(db)
+        if weights:
+            logger.info("AI 评估使用配置权重: %s", weights)
+        else:
+            logger.info("AI 评估未读取到配置权重，使用默认权重")
 
-    result = evaluate_trade(symbol, direction.value, entry_price, klines, interval, weights=weights or None)
+        result = evaluate_trade(symbol, direction.value, entry_price, klines, interval, weights=weights or None)
+    except Exception as e:
+        logger.exception("AI 评估：评估计算失败 symbol=%s", symbol)
+        raise AppException("AI_EVALUATION_FAILED", f"AI 评估计算失败: {e}", 500) from e
 
     return ApiResponse.ok(result)
