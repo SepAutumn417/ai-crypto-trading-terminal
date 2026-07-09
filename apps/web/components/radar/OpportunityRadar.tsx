@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, type CandidatePlan, type KlineInterval, type ScanResult } from '@/lib/api';
 import { useWebSocketInvalidation } from '@/lib/useWebSocket';
@@ -49,10 +49,17 @@ export function OpportunityRadar() {
   const [promoteTarget, setPromoteTarget] = useState<CandidatePlan | null>(null);
   const qc = useQueryClient();
 
-  // P1-14: scanResult 仅在扫描后短暂展示，刷新页面/切换 symbol 时清空，避免遮蔽 candidateList
+  // P1-14: scanResult 仅用于展示扫描摘要（市场状态/趋势/数量），不作为候选列表数据源
+  // 切换 symbol/interval 时清空，避免旧摘要残留
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
+
+  // P1-14: 切换 symbol/interval 时清空 scanResult，避免旧数据残留
+  useEffect(() => {
+    setScanResult(null);
+    setScanError(null);
+  }, [symbol, interval]);
 
   // P1-13: 订阅 auto-plans WebSocket 频道，实时刷新候选列表
   useWebSocketInvalidation('auto-plans', ['candidates']);
@@ -88,8 +95,8 @@ export function OpportunityRadar() {
     },
   });
 
-  // P1-14: 优先展示 scanResult（刚扫描的结果），否则展示 candidateList（实时列表）
-  const candidates = scanResult?.candidates ?? candidateList?.items ?? [];
+  // P1-14: 候选列表始终从 candidateList 获取，scanResult 仅用于展示扫描摘要
+  const candidates = candidateList?.items ?? [];
 
   return (
     <div className="space-y-6">
