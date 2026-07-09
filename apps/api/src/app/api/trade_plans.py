@@ -1,3 +1,4 @@
+from enum import Enum
 from uuid import UUID
 from typing import Optional
 from fastapi import APIRouter, Query
@@ -12,6 +13,18 @@ from app.schemas.trade_plan import (
 from app.services import plan_service, execution_service
 from app.websocket import ws_manager
 from shared.schemas import TradePlanInput
+
+
+class PlanStatusFilter(str, Enum):
+    DRAFT = "DRAFT"
+    CHECKED = "CHECKED"
+    READY_FOR_CONFIRMATION = "READY_FOR_CONFIRMATION"
+    SUBMITTED = "SUBMITTED"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELLED = "CANCELLED"
+    FAILED = "FAILED"
+    EXPIRED = "EXPIRED"
 
 
 router = APIRouter(prefix="/api/trade-plans", tags=["trade-plans"])
@@ -79,10 +92,10 @@ async def cancel_plan_order(plan_id: UUID, db: AsyncSession = Depends(get_db)) -
 
 @router.get("")
 async def list_plans(
-    status: Optional[str] = Query(None),
+    status: Optional[PlanStatusFilter] = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    plans = await plan_service.list_plans(db, status=status)
+    plans = await plan_service.list_plans(db, status=status.value if status else None)
     return ApiResponse.ok([p.model_dump(mode="json") for p in plans]).model_dump()
 
 

@@ -21,3 +21,23 @@ members = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["packages", "apps/api/tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+src = ["apps/api/src", "packages/*/src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501", "E701", "E702", "F401", "F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "shared", "position_sizing", "risk_engine", "decision_gate", "config_versioning", "exchange_adapter", "ai_evaluator", "market_structure", "auto_plan_engine"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = false
+disallow_untyped_defs = false
+exclude = ["tests/", "migrations/"]

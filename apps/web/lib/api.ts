@@ -107,6 +107,42 @@ export interface ActiveConfigs {
   symbol_rules?: ConfigVersion | null;
 }
 
+export interface CreateConfigInput {
+  config_type: 'risk' | 'execution' | 'opportunity_grade' | 'symbol_rules';
+  version_label: string;
+  payload: Record<string, unknown>;
+}
+
+export interface CalculatePositionInput {
+  equity: string;
+  risk_percent: string;
+  entry_price: string;
+  stop_loss_price?: string | null;
+  take_profit_prices?: string[];
+  leverage: string;
+  fee_rate: string;
+  direction: Direction;
+  symbol: string;
+}
+
+export interface CalculatePositionResult {
+  equity: string;
+  risk_percent: string;
+  risk_amount: string;
+  entry_price: string;
+  stop_loss_price: string | null;
+  stop_distance_percent: string;
+  notional_value: string;
+  raw_size: string;
+  rounded_size: string | null;
+  required_margin: string;
+  leverage: string;
+  estimated_fee: string;
+  risk_reward_ratio: string;
+  estimated_loss_at_stop: string;
+  sizing_warnings: string[];
+}
+
 export interface TradePlan {
   id: string;
   exchange: string;
@@ -412,7 +448,7 @@ export const api = {
     request<UserSettings>('/api/system/user-settings', { method: 'PUT', body: JSON.stringify(input) }),
   getActiveConfigs: () => request<ActiveConfigs>('/api/configs/active'),
   listConfigs: (type: string) => request<ConfigVersion[]>(`/api/configs?type=${type}`),
-  createConfig: (input: { config_type: string; version_label: string; payload: any }) =>
+  createConfig: (input: CreateConfigInput) =>
     request<ConfigVersion>('/api/configs', { method: 'POST', body: JSON.stringify(input) }),
   activateConfig: (id: string) =>
     request<ConfigVersion>(`/api/configs/${id}/activate`, { method: 'POST' }),
@@ -429,8 +465,8 @@ export const api = {
   listPlans: (status?: string) =>
     request<TradePlan[]>(status ? `/api/trade-plans?status=${status}` : '/api/trade-plans'),
   getPlan: (id: string) => request<TradePlan>(`/api/trade-plans/${id}`),
-  calculatePosition: (input: any) =>
-    request<any>('/api/risk/calculate-position', { method: 'POST', body: JSON.stringify(input) }),
+  calculatePosition: (input: CalculatePositionInput) =>
+    request<CalculatePositionResult>('/api/risk/calculate-position', { method: 'POST', body: JSON.stringify(input) }),
   getTicker: (symbol: string) =>
     request<Ticker>(`/api/market/ticker?symbol=${encodeURIComponent(symbol)}`),
   getKlines: (symbol: string, interval: KlineInterval = '1h', limit: number = 100) =>

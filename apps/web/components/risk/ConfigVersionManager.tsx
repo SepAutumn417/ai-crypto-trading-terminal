@@ -8,7 +8,7 @@ const TYPES = ['risk', 'execution', 'opportunity_grade', 'symbol_rules'] as cons
 export function ConfigVersionManager() {
   const [tab, setTab] = useState<typeof TYPES[number]>('risk');
   const qc = useQueryClient();
-  const { data: versions = [] } = useQuery({
+  const { data: versions = [], isLoading, isError, error } = useQuery({
     queryKey: ['configs', tab],
     queryFn: () => api.listConfigs(tab),
   });
@@ -31,6 +31,27 @@ export function ConfigVersionManager() {
           </button>
         ))}
       </div>
+
+      {isLoading && (
+        <div className="py-8 text-center text-gray-500 text-sm">加载中...</div>
+      )}
+
+      {isError && (
+        <div className="py-8 text-center text-red-400 text-sm">
+          加载失败：{(error as Error)?.message || '未知错误'}
+          <button
+            onClick={() => qc.invalidateQueries({ queryKey: ['configs', tab] })}
+            className="ml-2 text-blue-400 hover:underline"
+          >
+            重试
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !isError && versions.length === 0 && (
+        <div className="py-8 text-center text-gray-500 text-sm">暂无配置版本</div>
+      )}
+
       <div className="space-y-2">
         {versions.map((v) => (
           <div key={v.id} className={`p-2 border rounded ${v.is_active ? 'border-green-500 bg-green-950' : 'border-gray-800'}`}>
@@ -39,9 +60,12 @@ export function ConfigVersionManager() {
               {v.is_active ? (
                 <span className="text-xs text-green-400">ACTIVE</span>
               ) : (
-                <button onClick={() => activateMut.mutate(v.id)}
-                  className="text-xs px-2 py-1 border border-gray-700 rounded hover:bg-gray-800">
-                  激活
+                <button
+                  onClick={() => activateMut.mutate(v.id)}
+                  disabled={activateMut.isPending}
+                  className="text-xs px-2 py-1 border border-gray-700 rounded hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {activateMut.isPending && activateMut.variables === v.id ? '激活中...' : '激活'}
                 </button>
               )}
             </div>
@@ -49,6 +73,12 @@ export function ConfigVersionManager() {
           </div>
         ))}
       </div>
+
+      {activateMut.isError && (
+        <p className="text-red-400 text-sm mt-2">
+          激活失败：{(activateMut.error as Error)?.message || '未知错误'}
+        </p>
+      )}
     </div>
   );
 }

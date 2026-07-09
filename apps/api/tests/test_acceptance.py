@@ -296,3 +296,128 @@ async def test_acceptance_decision_gate_status_reduce_risk(client):
 
     resp = await client.post(f"/api/trade-plans/{pid}/check")
     assert resp.json()["data"]["decision"]["result"] == "REDUCE_RISK"
+
+
+# ===== v0.3 验收：市场结构识别 + 自动候选计划 =====
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_market_structure_recognition(client):
+    """v0.3 §1: 市场结构识别返回完整快照。"""
+    resp = await client.get("/api/market/structure", params={
+        "symbol": "BTCUSDT", "interval": "1h", "limit": 200,
+    })
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    # 结构快照必须包含核心字段
+    assert data["symbol"] == "BTCUSDT"
+    assert data["kline_count"] == 200
+    assert "market_state" in data
+    assert "trend_direction" in data
+    assert isinstance(data["swing_highs"], list)
+    assert isinstance(data["swing_lows"], list)
+    assert isinstance(data["bos_events"], list)
+    assert isinstance(data["choch_events"], list)
+    assert isinstance(data["support_zones"], list)
+    assert isinstance(data["resistance_zones"], list)
+    assert isinstance(data["no_trade_zones"], list)
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_market_structure_persists(client, db_session):
+    """v0.3 §2: 市场结构快照持久化到数据库。"""
+    resp = await client.get("/api/market/structure", params={"symbol": "BTCUSDT"})
+    snapshot_id = resp.json()["data"]["id"]
+
+    from app.models import MarketStructureSnapshotModel
+    model = await db_session.get(MarketStructureSnapshotModel, snapshot_id)
+    assert model is not None
+    assert model.symbol == "BTCUSDT"
+    assert model.market_state is not None
+    assert model.trend_direction is not None
+    assert model.kline_count == 200
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_auto_plan_scan(client):
+    """v0.3 §3: 自动扫描生成候选计划。"""
+    resp = await client.post("/api/auto-plans/scan", params={"symbol": "BTCUSDT"})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["symbol"] == "BTCUSDT"
+    assert "market_state" in data
+    assert "trend_direction" in data
+    assert isinstance(data["candidates"], list)
+    assert data["total"] == len(data["candidates"])
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_auto_plan_list_and_detail(client):
+    """v0.3 §4: 候选计划列表查询和详情查询。"""
+    await client.post("/api/auto-plans/scan", params={"symbol": "BTCUSDT"})
+
+    # 列表查询
+    list_resp = await client.get("/api/auto-plans", params={"status": "READY"})
+    assert list_resp.status_code == 200
+    items = list_resp.json()["data"]["items"]
+    assert len(items) > 0
+    for item in items:
+        assert item["status"] == "READY"
+
+    # 详情查询
+    candidate_id = items[0]["id"]
+    detail_resp = await client.get(f"/api/auto-plans/{candidate_id}")
+    assert detail_resp.status_code == 200
+    assert detail_resp.json()["data"]["id"] == candidate_id
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_auto_plan_promote(client):
+    """v0.3 §5: 候选计划提升为正式交易计划。"""
+    scan_resp = await client.post("/api/auto-plans/scan", params={"symbol": "BTCUSDT"})
+    candidates = scan_resp.json()["data"]["candidates"]
+    promotable = [c for c in candidates if c["entry_price"] is not None]
+    if not promotable:
+        pytest.skip("MockExchange 未生成有入场价的候选计划")
+    candidate_id = promotable[0]["id"]
+
+    resp = await client.post(f"/api/auto-plans/{candidate_id}/promote", json={
+        "leverage": "10", "risk_percent": "1", "equity": "1500",
+    })
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["status"] == "DRAFT"
+    assert data["trade_plan_id"] is not None
+
+    # 验证关联的交易计划可以查询
+    plan_resp = await client.get(f"/api/trade-plans/{data['trade_plan_id']}")
+    assert plan_resp.status_code == 200
+    assert plan_resp.json()["data"]["symbol"] == "BTCUSDT"
+
+
+@pytest.mark.asyncio
+async def test_acceptance_v03_promoted_plan_checkable(client):
+    """v0.3 §6: 提升后的交易计划可以跑风控检查。"""
+    scan_resp = await client.post("/api/auto-plans/scan", params={"symbol": "BTCUSDT"})
+    candidates = scan_resp.json()["data"]["candidates"]
+    promotable = [c for c in candidates if c["entry_price"] is not None]
+    if not promotable:
+        pytest.skip("MockExchange 未生成有入场价的候选计划")
+    candidate_id = promotable[0]["id"]
+
+    promote_resp = await client.post(f"/api/auto-plans/{candidate_id}/promote", json={
+        "leverage": "10", "risk_percent": "1", "equity": "1500",
+    })
+    plan_id = promote_resp.json()["data"]["trade_plan_id"]
+
+    # 启用 execution + 关闭 kill_switch
+    await client.post("/api/system/execution-mode", json={"enabled": True})
+    await client.post("/api/system/kill-switch", json={"enabled": False})
+
+    # 跑风控检查
+    check_resp = await client.post(f"/api/trade-plans/{plan_id}/check")
+    assert check_resp.status_code == 200
+    check_data = check_resp.json()["data"]
+    assert "sizing" in check_data
+    assert "risk" in check_data
+    assert "decision" in check_data

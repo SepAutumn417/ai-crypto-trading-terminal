@@ -47,9 +47,59 @@ jobs:
       - name: Sync dependencies
         run: uv sync --all-packages
 
+      - name: Ruff check
+        run: uv run ruff check apps/api/src packages/
+
+      - name: Mypy type check
+        run: uv run mypy apps/api/src/app/ packages/*/src/ --ignore-missing-imports
+
       - name: Run Alembic migrations
         working-directory: apps/api
         run: uv run alembic upgrade head
+
+      - name: Check single migration head
+        working-directory: apps/api
+        run: |
+          HEADS=$(uv run alembic heads 2>&1)
+          echo "$HEADS"
+          COUNT=$(echo "$HEADS" | grep -c "^*" || true)
+          if [ "$COUNT" -gt 1 ]; then
+            echo "ERROR: Multiple migration heads detected — migration chain is branched"
+            exit 1
+          fi
+          echo "OK: Single migration head"
+
+      - name: Migration consistency check
+        working-directory: apps/api
+        run: uv run python -c "
+          import asyncio
+          from sqlalchemy.ext.asyncio import create_async_engine
+          from app.db import Base
+          from app.models import *
+          import alembic.config, alembic.command
+          from alembic.runtime.migration import MigrationContext
+          from alembic.autogenerate import compare_metadata
+
+          async def check():
+              engine = create_async_engine('${DATABASE_URL}')
+              async with engine.connect() as conn:
+                  def do_inspect(sync_conn):
+                      mc = MigrationContext.configure(sync_conn)
+                      diff = compare_metadata(mc, Base.metadata)
+                      if diff:
+                          print('PENDING MIGRATION CHANGES:')
+                          for d in diff:
+                              print(d)
+                          return False
+                      return True
+                  ok = await conn.run_sync(do_inspect)
+              await engine.dispose()
+              if not ok:
+                  raise SystemExit('ORM models do not match migration state — run: alembic revision --autogenerate')
+              print('OK: ORM models match migration state')
+
+          asyncio.run(check())
+          "
 
       - name: Run pytest
         run: uv run pytest -v --tb=short

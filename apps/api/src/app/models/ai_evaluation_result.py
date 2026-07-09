@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, Index, Numeric, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, func, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +21,12 @@ class AIEvaluationResultModel(Base):
         Index("ix_ai_eval_results_symbol", "symbol"),
         Index("ix_ai_eval_results_grade", "grade"),
         Index("ix_ai_eval_results_created_at", "created_at"),
+        Index(
+            "ix_ai_eval_results_latest",
+            "trade_plan_id",
+            unique=True,
+            postgresql_where=text("is_latest = true"),
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -37,5 +43,5 @@ class AIEvaluationResultModel(Base):
     summary: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
     conviction: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)
     interval: Mapped[str | None] = mapped_column(String(8), nullable=True)
-    is_latest: Mapped[bool] = mapped_column(default=True, nullable=False)
+    is_latest: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
