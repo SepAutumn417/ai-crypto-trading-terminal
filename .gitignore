@@ -10,6 +10,7 @@ __pycache__/
 node_modules/
 .next/
 out/
+*.tsbuildinfo
 
 # OpenAPI 生成产物（openapi.json 是临时文件，api-types.ts 提交到仓库）
 apps/web/openapi.json
