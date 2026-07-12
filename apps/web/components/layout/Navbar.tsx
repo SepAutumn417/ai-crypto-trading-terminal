@@ -8,7 +8,7 @@ export function Navbar() {
   const links = [
     { href: '/market', label: '行情' },
     { href: '/radar', label: '机会雷达' },
-    { href: '/ai', label: 'AI 评估' },
+    { href: '/ai', label: '指标评分' },
     { href: '/plans', label: '交易计划' },
     { href: '/journal', label: '交易日志' },
     { href: '/risk', label: '风控中心' },

@@ -1,9 +1,9 @@
 from decimal import Decimal
-from typing import List, Tuple
+
 from exchange_adapter import Kline
 
 
-def sma(prices: List[Decimal], period: int) -> List[Decimal]:
+def sma(prices: list[Decimal], period: int) -> list[Decimal]:
     if len(prices) < period:
         return []
     result = []
@@ -13,7 +13,7 @@ def sma(prices: List[Decimal], period: int) -> List[Decimal]:
     return result
 
 
-def ema(prices: List[Decimal], period: int) -> List[Decimal]:
+def ema(prices: list[Decimal], period: int) -> list[Decimal]:
     if len(prices) < period:
         return []
     multiplier = Decimal("2") / (Decimal(str(period)) + Decimal("1"))
@@ -24,11 +24,11 @@ def ema(prices: List[Decimal], period: int) -> List[Decimal]:
     return result
 
 
-def rsi(prices: List[Decimal], period: int = 14) -> List[Decimal]:
+def rsi(prices: list[Decimal], period: int = 14) -> list[Decimal]:
     if len(prices) < period + 1:
         return []
-    gains: List[Decimal] = []
-    losses: List[Decimal] = []
+    gains: list[Decimal] = []
+    losses: list[Decimal] = []
     for i in range(1, len(prices)):
         diff = prices[i] - prices[i - 1]
         if diff > 0:
@@ -61,8 +61,8 @@ def rsi(prices: List[Decimal], period: int = 14) -> List[Decimal]:
 
 
 def macd(
-    prices: List[Decimal], fast: int = 12, slow: int = 26, signal: int = 9
-) -> Tuple[List[Decimal], List[Decimal], List[Decimal]]:
+    prices: list[Decimal], fast: int = 12, slow: int = 26, signal: int = 9
+) -> tuple[list[Decimal], list[Decimal], list[Decimal]]:
     fast_ema = ema(prices, fast)
     slow_ema = ema(prices, slow)
 
@@ -83,14 +83,14 @@ def macd(
 
 
 def bollinger_bands(
-    prices: List[Decimal], period: int = 20, num_std: Decimal = Decimal("2")
-) -> Tuple[List[Decimal], List[Decimal], List[Decimal]]:
+    prices: list[Decimal], period: int = 20, num_std: Decimal = Decimal("2")
+) -> tuple[list[Decimal], list[Decimal], list[Decimal]]:
     if len(prices) < period:
         return [], [], []
 
     middle = sma(prices, period)
-    upper: List[Decimal] = []
-    lower: List[Decimal] = []
+    upper: list[Decimal] = []
+    lower: list[Decimal] = []
 
     for i in range(period - 1, len(prices)):
         window = prices[i - period + 1 : i + 1]
@@ -103,5 +103,5 @@ def bollinger_bands(
     return upper, middle, lower
 
 
-def get_closes(klines: List[Kline]) -> List[Decimal]:
+def get_closes(klines: list[Kline]) -> list[Decimal]:
     return [k.close for k in klines]

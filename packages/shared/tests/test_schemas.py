@@ -1,7 +1,8 @@
 from decimal import Decimal
-from shared.enums import Direction, OpportunityGrade
-from shared.schemas import TradePlanInput, PositionSizingResult
+
 from shared.configs import RiskConfig, SymbolRule, SymbolRules
+from shared.enums import Direction, OpportunityGrade
+from shared.schemas import PositionSizingResult, TradePlanInput
 
 
 def test_trade_plan_input_creation():

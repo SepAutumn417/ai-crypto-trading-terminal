@@ -1,5 +1,5 @@
-from uuid import uuid4
 from decimal import Decimal
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, field_validator
@@ -15,8 +15,8 @@ from app.schemas.system import (
     SystemStatus,
     UserSettingsOut,
 )
+from app.security import require_auth
 from app.websocket import ws_manager
-
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
@@ -73,28 +73,29 @@ async def get_status(db: AsyncSession = Depends(get_db)) -> dict:
 
 @router.post("/kill-switch")
 async def toggle_kill_switch(
-    body: KillSwitchRequest, db: AsyncSession = Depends(get_db)
+    body: KillSwitchRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth)
 ) -> dict:
+    """P0-5: Kill Switch 端点 — 激活时强制关闭 execution mode，并记录审计原因。"""
     settings = await db.get(UserSettings, 1)
     if settings is None:
         return ApiResponse.err(
             "USER_SETTINGS_NOT_FOUND", "user_settings 未初始化"
         ).model_dump()
 
-    settings.kill_switch = body.enabled
-    event = SystemEvent(
-        id=uuid4(),
-        event_type="kill_switch_toggled",
-        severity="info",
-        entity_type="user_settings",
-        entity_id=None,
-        actor="user",
-        message=f"Kill Switch set to {body.enabled}",
-        payload={"enabled": body.enabled},
-    )
-    db.add(event)
-    await db.commit()
+    reason = body.reason or ("手动激活" if body.enabled else "手动解除")
 
+    if body.enabled:
+        # 激活：强制关闭 execution mode
+        from app.services.kill_switch_service import activate_kill_switch
+        await activate_kill_switch(
+            db, reason=reason, triggered_by="user", severity="warning",
+        )
+    else:
+        # 解除：不自动开启 execution mode，需用户单独开启
+        from app.services.kill_switch_service import deactivate_kill_switch
+        await deactivate_kill_switch(db, reason=reason, triggered_by="user")
+
+    await db.refresh(settings)
     await _broadcast_system_status(settings)
 
     return ApiResponse.ok(UserSettingsOut(
@@ -107,12 +108,20 @@ async def toggle_kill_switch(
 
 @router.post("/execution-mode")
 async def toggle_execution_mode(
-    body: ExecutionModeRequest, db: AsyncSession = Depends(get_db)
+    body: ExecutionModeRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth)
 ) -> dict:
+    """P0-5: Execution Mode 端点 — Kill Switch 激活时拒绝开启。"""
     settings = await db.get(UserSettings, 1)
     if settings is None:
         return ApiResponse.err(
             "USER_SETTINGS_NOT_FOUND", "user_settings 未初始化"
+        ).model_dump()
+
+    # P0-5: Kill Switch 激活时拒绝开启 execution mode
+    if body.enabled and settings.kill_switch:
+        return ApiResponse.err(
+            "KILL_SWITCH_ACTIVE",
+            "Kill Switch 已激活，无法开启 Execution Mode。请先解除 Kill Switch",
         ).model_dump()
 
     settings.execution_enabled = body.enabled
@@ -161,7 +170,7 @@ async def get_user_settings_endpoint(db: AsyncSession = Depends(get_db)) -> dict
 
 @router.put("/user-settings")
 async def update_user_settings(
-    body: UpdateEquityRequest, db: AsyncSession = Depends(get_db)
+    body: UpdateEquityRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth)
 ) -> dict:
     """更新 account_equity / mode。其他字段（execution_enabled/kill_switch）走专用端点。"""
     settings = await db.get(UserSettings, 1)

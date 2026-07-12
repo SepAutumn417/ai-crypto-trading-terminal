@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 
 from app.api.router import api_router
 from app.config import settings
@@ -36,7 +38,7 @@ app.include_router(ws_router)
 
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-    detail = exc.detail if isinstance(exc.detail, dict) else {"code": exc.code, "message": str(exc.detail)}
+    detail: dict = exc.detail if isinstance(exc.detail, dict) else {"code": exc.code, "message": str(exc.detail)}
     return JSONResponse(
         status_code=exc.status_code,
         content=ApiResponse.err(
@@ -54,7 +56,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         content=ApiResponse.err(
             "VALIDATION_ERROR",
             "请求参数验证失败",
-            {"errors": exc.errors()},
+            {"errors": jsonable_encoder(exc.errors())},
         ).model_dump(),
     )
 

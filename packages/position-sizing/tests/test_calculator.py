@@ -1,7 +1,8 @@
 from decimal import Decimal
+
+from position_sizing.calculator import calculate
 from shared.configs import SymbolRule
 from shared.enums import Direction
-from position_sizing.calculator import calculate
 
 
 def _btc_rules():
@@ -25,9 +26,14 @@ def test_calculate_long_basic():
     assert result.raw_size == Decimal("0.03")
     assert result.rounded_size == Decimal("0.030")
     assert result.required_margin == Decimal("187.2")
-    assert result.estimated_fee == Decimal("0.936")
+    # P1-2: estimated_fee 现在是双边手续费（开仓 + 平仓）
+    assert result.estimated_fee == Decimal("1.872")
+    # P1-2: 滑点和资金费率
+    assert result.estimated_slippage == Decimal("0.936")
+    assert result.estimated_funding == Decimal("0.1872")
     assert result.risk_reward_ratio == Decimal("2.8")
-    assert result.estimated_loss_at_stop == Decimal("15.936")
+    # P1-2: 最大损失 = 风险金额 + 双边手续费 + 滑点 + 资金费率
+    assert result.estimated_loss_at_stop == Decimal("17.9952")
     assert result.sizing_warnings == []
 
 

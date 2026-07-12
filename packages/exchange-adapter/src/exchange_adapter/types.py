@@ -26,7 +26,7 @@ class Kline(BaseModel):
     low: Decimal
     close: Decimal
     volume: Decimal
-    quote_volume: Optional[Decimal] = None
+    quote_volume: Decimal | None = None
 
 
 class OrderbookLevel(BaseModel):
@@ -38,19 +38,19 @@ class Orderbook(BaseModel):
     symbol: str
     bids: list[OrderbookLevel]
     asks: list[OrderbookLevel]
-    timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
 
 
 class Ticker(BaseModel):
     symbol: str
     last_price: Decimal
-    mark_price: Optional[Decimal] = None
-    index_price: Optional[Decimal] = None
-    high_24h: Optional[Decimal] = None
-    low_24h: Optional[Decimal] = None
-    volume_24h: Optional[Decimal] = None
-    change_percent_24h: Optional[Decimal] = None
-    timestamp: Optional[datetime] = None
+    mark_price: Decimal | None = None
+    index_price: Decimal | None = None
+    high_24h: Decimal | None = None
+    low_24h: Decimal | None = None
+    volume_24h: Decimal | None = None
+    change_percent_24h: Decimal | None = None
+    timestamp: datetime | None = None
 
 
 class OrderSide(str, Enum):
@@ -87,16 +87,16 @@ class Order(BaseModel):
     side: OrderSide
     type: OrderType
     status: OrderStatus
-    price: Optional[Decimal] = None
+    price: Decimal | None = None
     quantity: Decimal
     filled_quantity: Decimal = Decimal("0")
-    average_fill_price: Optional[Decimal] = None
-    stop_price: Optional[Decimal] = None
-    take_profit_price: Optional[Decimal] = None
-    stop_loss_price: Optional[Decimal] = None
-    client_order_id: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    average_fill_price: Decimal | None = None
+    stop_price: Decimal | None = None
+    take_profit_price: Decimal | None = None
+    stop_loss_price: Decimal | None = None
+    client_order_id: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 class Position(BaseModel):
@@ -104,20 +104,20 @@ class Position(BaseModel):
     side: PositionSide
     quantity: Decimal
     entry_price: Decimal
-    mark_price: Optional[Decimal] = None
-    unrealized_pnl: Optional[Decimal] = None
-    unrealized_pnl_percent: Optional[Decimal] = None
+    mark_price: Decimal | None = None
+    unrealized_pnl: Decimal | None = None
+    unrealized_pnl_percent: Decimal | None = None
     leverage: Decimal
     margin_type: str
-    liquidation_price: Optional[Decimal] = None
-    margin: Optional[Decimal] = None
-    updated_at: Optional[datetime] = None
+    liquidation_price: Decimal | None = None
+    margin: Decimal | None = None
+    updated_at: datetime | None = None
 
 
 class Balance(BaseModel):
     asset: str
     available: Decimal
     total: Decimal
-    unrealized_pnl: Optional[Decimal] = None
-    margin_balance: Optional[Decimal] = None
-    equity: Optional[Decimal] = None
+    unrealized_pnl: Decimal | None = None
+    margin_balance: Decimal | None = None
+    equity: Decimal | None = None

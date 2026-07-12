@@ -1,4 +1,4 @@
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 
 
 def round_to_step(value: Decimal, step: Decimal) -> Decimal:

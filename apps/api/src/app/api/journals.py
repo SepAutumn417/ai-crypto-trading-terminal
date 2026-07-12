@@ -1,4 +1,5 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,11 +8,12 @@ from app.exceptions import AppException
 from app.response import ApiResponse
 from app.schemas.trade_journal import (
     TradeJournalCreate,
-    TradeJournalUpdate,
-    TradeJournalOut,
     TradeJournalListResponse,
+    TradeJournalOut,
     TradeJournalSummary,
+    TradeJournalUpdate,
 )
+from app.security import require_auth
 from app.services.trade_journal_service import TradeJournalService
 from app.websocket import ws_manager
 
@@ -70,6 +72,7 @@ async def get_journal(
 async def create_journal(
     data: TradeJournalCreate,
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> dict:
     journal = await TradeJournalService.create(db, data)
     await _broadcast_journal("journal_created", str(journal.id))
@@ -81,6 +84,7 @@ async def update_journal(
     journal_id: UUID,
     data: TradeJournalUpdate,
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> dict:
     journal = await TradeJournalService.update(db, journal_id, data)
     if not journal:
@@ -93,6 +97,7 @@ async def update_journal(
 async def delete_journal(
     journal_id: UUID,
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> dict:
     success = await TradeJournalService.delete(db, journal_id)
     if not success:

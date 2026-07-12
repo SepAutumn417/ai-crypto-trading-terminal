@@ -1,14 +1,16 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
 
+from risk_engine.rules import (
+    check_hard_blocks,
+    check_warnings,
+    grade_max_risk,
+    grade_to_status,
+)
 from shared.account import AccountRiskState
 from shared.configs import ExecutionConfig, OpportunityGradeConfig, RiskConfig
 from shared.enums import RiskStatus
 from shared.schemas import PositionSizingResult, RiskCheckResult, TradePlanInput
-
-from risk_engine.rules import (
-    check_hard_blocks, check_warnings, grade_max_risk, grade_to_status,
-)
 
 
 def check(
@@ -23,7 +25,7 @@ def check(
     exchange_connected: bool,
     db_healthy: bool,
 ) -> RiskCheckResult:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     block_reasons = check_hard_blocks(
         sizing=sizing_result, risk_cfg=risk_config, exec_cfg=execution_config,

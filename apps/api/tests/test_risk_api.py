@@ -34,8 +34,9 @@ async def test_risk_check(client):
             "notional_value": "1872",
             "raw_size": "0.03", "rounded_size": "0.030",
             "required_margin": "187.2", "leverage": "10",
-            "estimated_fee": "0.936", "risk_reward_ratio": "2.8",
-            "estimated_loss_at_stop": "15.936", "sizing_warnings": [],
+            "estimated_fee": "1.872", "risk_reward_ratio": "2.8",
+            "estimated_loss_at_stop": "17.9952", "sizing_warnings": [],
+            "estimated_slippage": "0.936", "estimated_funding": "0.1872",
         },
     })
     assert resp.status_code == 200

@@ -1,6 +1,7 @@
 """v0.1 验收测试 - 对齐设计稿 §7"""
 import pytest
 from decimal import Decimal
+from unittest.mock import MagicMock, patch
 from uuid import UUID
 from sqlalchemy import select
 
@@ -8,6 +9,22 @@ from app.models import (
     AccountRiskState as AccountRiskStateModel,
     DecisionGateResult, PositionSizingResult, RiskCheck, SystemEvent,
 )
+
+
+def _mock_ai_grade_a():
+    """创建 mock AI 评估结果（A 级），避免 MockExchange 正弦波数据导致 D 级降级。"""
+    from ai_evaluator.types import EvaluationGrade
+    fake = MagicMock()
+    fake.grade = EvaluationGrade.A
+    fake.overall_score = Decimal("80")
+    fake.symbol = "BTCUSDT"
+    fake.direction = "LONG"
+    fake.recommendation = "强烈推荐"
+    fake.risk_level = "低"
+    fake.signals = []
+    fake.summary = "mock"
+    fake.conviction = Decimal("80")
+    return patch("ai_evaluator.evaluate_trade", return_value=fake)
 
 
 # ===== §7.1 创建交易计划 + 输入入场/止损/止盈 + 计算风险/止损距离/名义仓位/保证金/盈亏比 =====
@@ -52,10 +69,12 @@ async def test_acceptance_risk_decision_and_persist(client, db_session):
         "risk_percent": "1", "opportunity_grade": "A", "equity": "1500",
     })
     plan_id = resp.json()["data"]["id"]
-    await client.post("/api/system/execution-mode", json={"enabled": True})
+    # P0-5: 先解除 Kill Switch，再开启 Execution Mode
     await client.post("/api/system/kill-switch", json={"enabled": False})
+    await client.post("/api/system/execution-mode", json={"enabled": True})
 
-    await client.post(f"/api/trade-plans/{plan_id}/check")
+    with _mock_ai_grade_a():
+        await client.post(f"/api/trade-plans/{plan_id}/check")
 
     ps = await db_session.scalar(select(PositionSizingResult).where(PositionSizingResult.trade_plan_id == UUID(plan_id)))
     rc = await db_session.scalar(select(RiskCheck).where(RiskCheck.trade_plan_id == UUID(plan_id)))
@@ -259,7 +278,7 @@ async def test_acceptance_system_events_recorded(client, db_session):
     result = await db_session.execute(select(SystemEvent).order_by(SystemEvent.created_at.desc()))
     latest = result.scalar_one_or_none()
     assert latest is not None
-    assert latest.event_type == "kill_switch_toggled"
+    assert latest.event_type == "kill_switch_deactivated"
 
 
 # ===== §7.8 decision-gate 5 种状态 =====
@@ -274,10 +293,12 @@ async def test_acceptance_decision_gate_status_allow_confirm(client):
         "risk_percent": "1", "opportunity_grade": "A", "equity": "1500",
     })
     pid = resp.json()["data"]["id"]
-    await client.post("/api/system/execution-mode", json={"enabled": True})
+    # P0-5: 先解除 Kill Switch，再开启 Execution Mode（Kill Switch 激活时拒绝开启）
     await client.post("/api/system/kill-switch", json={"enabled": False})
+    await client.post("/api/system/execution-mode", json={"enabled": True})
 
-    resp = await client.post(f"/api/trade-plans/{pid}/check")
+    with _mock_ai_grade_a():
+        resp = await client.post(f"/api/trade-plans/{pid}/check")
     assert resp.json()["data"]["decision"]["result"] == "ALLOW_CONFIRM"
 
 
@@ -291,8 +312,9 @@ async def test_acceptance_decision_gate_status_reduce_risk(client):
         "risk_percent": "1", "opportunity_grade": "B", "equity": "1500",
     })
     pid = resp.json()["data"]["id"]
-    await client.post("/api/system/execution-mode", json={"enabled": True})
+    # P0-5: 先解除 Kill Switch，再开启 Execution Mode
     await client.post("/api/system/kill-switch", json={"enabled": False})
+    await client.post("/api/system/execution-mode", json={"enabled": True})
 
     resp = await client.post(f"/api/trade-plans/{pid}/check")
     assert resp.json()["data"]["decision"]["result"] == "REDUCE_RISK"

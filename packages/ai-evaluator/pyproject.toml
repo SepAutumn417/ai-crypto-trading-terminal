@@ -1,11 +1,12 @@
 [project]
 name = "ai-evaluator"
-version = "0.1.0"
-description = "AI evaluation module for trading opportunities"
+version = "0.5.0"
+description = "AI 评估器 — v0.5 LLM 解释层 + 规则评分降级"
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.5.0",
     "exchange-adapter",
+    "httpx>=0.27.0",
 ]
 
 [build-system]

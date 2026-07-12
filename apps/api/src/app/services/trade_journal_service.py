@@ -1,9 +1,10 @@
 from uuid import UUID
-from sqlalchemy import select, func
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.trade_journal import TradeJournal
-from app.schemas.trade_journal import TradeJournalCreate, TradeJournalUpdate, TradeJournalSummary
+from app.schemas.trade_journal import TradeJournalCreate, TradeJournalSummary, TradeJournalUpdate
 
 
 class TradeJournalService:
@@ -45,7 +46,7 @@ class TradeJournalService:
         count_result = await db.execute(count_query)
         total = count_result.scalar_one()
 
-        return result.scalars().all(), total
+        return list(result.scalars().all()), total
 
     @staticmethod
     async def update(
@@ -57,9 +58,15 @@ class TradeJournalService:
         if not journal:
             return None
 
+        prev_status = journal.status
         update_data = data.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(journal, key, value)
+
+        # P1-1: 平仓时更新风控状态（daily_loss_r、consecutive_losses、cooldown_until）
+        if prev_status != "CLOSED" and journal.status == "CLOSED":
+            from app.services.risk_state_service import update_risk_state_on_close
+            await update_risk_state_on_close(db, journal)
 
         await db.commit()
         await db.refresh(journal)
@@ -78,6 +85,7 @@ class TradeJournalService:
     async def get_summary(db: AsyncSession, symbol: str | None = None) -> TradeJournalSummary:
         """SQL 聚合统计，避免全量加载 closed_trades。"""
         from decimal import Decimal
+
         from sqlalchemy import case, func
 
         base_filter = [TradeJournal.status == "CLOSED"]

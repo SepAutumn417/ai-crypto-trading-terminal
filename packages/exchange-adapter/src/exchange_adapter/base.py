@@ -8,10 +8,10 @@ from .types import (
     Kline,
     KlineInterval,
     Order,
+    Orderbook,
     OrderSide,
     OrderStatus,
     OrderType,
-    Orderbook,
     Position,
     PositionSide,
     Ticker,
@@ -50,8 +50,8 @@ class Exchange(ABC):
         symbol: str,
         interval: KlineInterval,
         limit: int = 100,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> list[Kline]:
         """获取 K 线数据。
 
@@ -80,7 +80,7 @@ class Exchange(ABC):
         ...
 
     @abstractmethod
-    async def get_positions(self, symbol: Optional[str] = None) -> list[Position]:
+    async def get_positions(self, symbol: str | None = None) -> list[Position]:
         """获取持仓列表。
 
         Args:
@@ -92,7 +92,7 @@ class Exchange(ABC):
     async def get_orders(
         self,
         symbol: str,
-        status: Optional[OrderStatus] = None,
+        status: OrderStatus | None = None,
         limit: int = 50,
     ) -> list[Order]:
         """获取订单列表。
@@ -109,6 +109,13 @@ class Exchange(ABC):
         """获取单个订单详情。"""
         ...
 
+    async def get_order_by_client_id(self, symbol: str, client_order_id: str) -> Order | None:
+        """按 clientOid 查询订单详情（用于对账恢复）。
+
+        默认实现返回 None，子类可覆写以支持按 clientOid 查询。
+        """
+        return None
+
     @abstractmethod
     async def place_order(
         self,
@@ -116,11 +123,13 @@ class Exchange(ABC):
         side: OrderSide,
         order_type: OrderType,
         quantity: Decimal,
-        price: Optional[Decimal] = None,
-        stop_price: Optional[Decimal] = None,
-        take_profit_price: Optional[Decimal] = None,
-        stop_loss_price: Optional[Decimal] = None,
-        client_order_id: Optional[str] = None,
+        price: Decimal | None = None,
+        stop_price: Decimal | None = None,
+        take_profit_price: Decimal | None = None,
+        stop_loss_price: Decimal | None = None,
+        client_order_id: str | None = None,
+        margin_mode: str | None = None,
+        margin_coin: str | None = None,
     ) -> Order:
         """提交订单。
 
@@ -134,6 +143,8 @@ class Exchange(ABC):
             take_profit_price: 止盈价
             stop_loss_price: 止损价
             client_order_id: 客户端自定义订单 ID
+            margin_mode: 保证金模式（'isolated'/'crossed'），P0-1: Bitget 要求在下单请求中携带
+            margin_coin: 保证金币种（如 'USDT'），P0-1: Bitget 要求在下单请求中携带
         """
         ...
 

@@ -1,7 +1,8 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from uuid import UUID, uuid4
-from shared.enums import ConfigType
+
 from config_versioning.models import ConfigVersion
+from shared.enums import ConfigType
 
 
 class ConfigNotFoundError(Exception):
@@ -21,7 +22,7 @@ class ConfigStore:
         version = ConfigVersion(
             id=uuid4(), config_type=config_type, version_label=version_label,
             payload=payload, is_active=False,
-            created_at=datetime.now(timezone.utc), activated_at=None,
+            created_at=datetime.now(UTC), activated_at=None,
         )
         self._versions[version.id] = version
         return version
@@ -42,7 +43,7 @@ class ConfigStore:
                 self._versions[v.id] = v.model_copy(update={"is_active": False})
         activated = target.model_copy(update={
             "is_active": True,
-            "activated_at": datetime.now(timezone.utc),
+            "activated_at": datetime.now(UTC),
         })
         self._versions[activated.id] = activated
         return activated

@@ -1,15 +1,16 @@
-import pytest
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timezone, timedelta
 
-from ai_evaluator import evaluate_trade, EvaluationGrade, SignalType, DEFAULT_WEIGHTS
+import pytest
+
+from ai_evaluator import DEFAULT_WEIGHTS, EvaluationGrade, SignalType, evaluate_trade
 from exchange_adapter import Kline, KlineInterval
 
 
 def generate_klines(count: int, start_price: Decimal, trend: str = "sideways") -> list[Kline]:
     klines = []
     price = start_price
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for i in range(count):
         if trend == "up":
             change = Decimal("0.5")

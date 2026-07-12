@@ -71,7 +71,8 @@ jobs:
 
       - name: Migration consistency check
         working-directory: apps/api
-        run: uv run python -c "
+        run: |
+          uv run python <<'PYEOF'
           import asyncio
           from sqlalchemy.ext.asyncio import create_async_engine
           from app.db import Base
@@ -99,7 +100,7 @@ jobs:
               print('OK: ORM models match migration state')
 
           asyncio.run(check())
-          "
+          PYEOF
 
       - name: Run pytest
         run: uv run pytest -v --tb=short

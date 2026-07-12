@@ -1,8 +1,9 @@
 from decimal import Decimal
+
+from position_sizing.rounding import round_to_step
 from shared.configs import SymbolRule, SymbolRules
 from shared.enums import Direction
 from shared.schemas import PositionSizingResult
-from position_sizing.rounding import round_to_step
 
 
 def calculate(
@@ -68,7 +69,16 @@ def calculate(
             rounded_size = None
 
     required_margin = notional_value / leverage if leverage > 0 else Decimal("0")
-    estimated_fee = notional_value * fee_rate
+    # P1-2: 双边手续费（开仓 + 平仓）
+    estimated_fee = notional_value * fee_rate * Decimal("2")
+
+    # P1-2: 滑点成本（按止损方向的滑点估算）
+    slippage_rate = symbol_rules.slippage_rate
+    estimated_slippage = notional_value * slippage_rate
+
+    # P1-2: 资金费率（假设持仓 8h，按名义价值计算）
+    funding_rate = symbol_rules.funding_rate
+    estimated_funding = notional_value * funding_rate
 
     if stop_distance_percent > 0 and take_profit_prices:
         if direction == Direction.LONG:
@@ -79,7 +89,8 @@ def calculate(
     else:
         risk_reward_ratio = Decimal("0")
 
-    estimated_loss_at_stop = risk_amount + estimated_fee
+    # P1-2: 最大损失 = 风险金额 + 双边手续费 + 滑点 + 资金费率
+    estimated_loss_at_stop = risk_amount + estimated_fee + estimated_slippage + estimated_funding
 
     return PositionSizingResult(
         equity=equity, risk_percent=risk_percent, risk_amount=risk_amount,
@@ -89,5 +100,7 @@ def calculate(
         leverage=leverage, estimated_fee=estimated_fee,
         risk_reward_ratio=risk_reward_ratio,
         estimated_loss_at_stop=estimated_loss_at_stop,
+        estimated_slippage=estimated_slippage,
+        estimated_funding=estimated_funding,
         sizing_warnings=warnings,
     )

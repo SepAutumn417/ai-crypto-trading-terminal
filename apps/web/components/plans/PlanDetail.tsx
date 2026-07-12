@@ -1,6 +1,6 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type CheckResult, type TradePlan } from '@/lib/api';
+import { api, type CheckResult } from '@/lib/api';
 import { SizingCard } from './SizingCard';
 import { RiskCard } from './RiskCard';
 import { DecisionCard } from './DecisionCard';

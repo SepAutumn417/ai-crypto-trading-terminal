@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, Query
-from typing import Optional
 import logging
+from typing import Optional
 
-from app.response import ApiResponse
+from fastapi import APIRouter, Depends, Query
+
+from app.config import settings
 from app.db import get_db
 from app.models.market_structure_snapshot import MarketStructureSnapshotModel
-from exchange_adapter import BitgetExchange, MockExchange, KlineInterval
-from app.config import settings
+from app.response import ApiResponse
+from exchange_adapter import BitgetExchange, KlineInterval, MockExchange
 
 logger = logging.getLogger(__name__)
 

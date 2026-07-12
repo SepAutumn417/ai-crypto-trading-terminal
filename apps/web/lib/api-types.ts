@@ -1573,3 +1573,32 @@ export interface operations {
         };
     };
 }
+
+// ===== 以下为手动补充类型（非 openapi-typescript 自动生成）=====
+// 注意：运行 `pnpm --filter web generate-types` 重新生成时，以下定义不会被覆盖，
+// 但若 schema 变更需手动同步维护。
+export interface AIExplanation {
+    summary: string;
+    marketStateExplanation: string;
+    planQualityExplanation: string;
+    riskExplanation: string;
+    opportunityGradeComment: string;
+    recommendedAction: 'WAIT' | 'ALLOW_CONFIRM' | 'REDUCE_RISK' | 'DO_NOT_TRADE';
+    warnings: string[];
+    upgradeConditions: string[];
+    invalidationConditions: string[];
+    emotionalRiskFlags: string[];
+}
+
+export interface ComprehensiveAIEvaluation {
+    symbol: string;
+    direction: string;
+    overall_score: string;
+    grade: string;
+    recommendation: string;
+    risk_level: string;
+    conviction: string;
+    source: 'llm' | 'rule_based';
+    signals: components["schemas"]["IndicatorResult"][];
+    explanation?: AIExplanation;
+}

@@ -1,6 +1,6 @@
-from uuid import UUID, uuid4
-from decimal import Decimal
 import logging
+from decimal import Decimal
+from uuid import UUID, uuid4
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,28 +8,56 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.exceptions import PlanNotRecheckableException
 from app.models import (
     AIEvaluationResultModel,
+)
+from app.models import (
     DecisionGateResult as DecisionGateResultModel,
+)
+from app.models import (
     PositionSizingResult as PositionSizingResultModel,
+)
+from app.models import (
     RiskCheck as RiskCheckModel,
+)
+from app.models import (
     TradePlan as TradePlanModel,
 )
 from app.services.config_service import (
-    get_account_risk_state, get_active_execution_config,
-    get_active_opportunity_grade_config, get_active_risk_config,
-    get_active_symbol_rules, get_ai_indicator_weights, get_symbol_rule, get_user_settings,
+    get_account_risk_state,
+    get_active_execution_config,
+    get_active_opportunity_grade_config,
+    get_active_risk_config,
+    get_active_symbol_rules,
+    get_ai_indicator_weights,
+    get_symbol_rule,
+    get_user_settings,
 )
 from app.services.plan_converter import (
-    to_schema as _to_schema, to_input as _to_input,
-    to_sizing_out as _to_sizing_out, to_risk_out as _to_risk_out,
     to_decision_out as _to_decision_out,
 )
-from shared.enums import (
-    DecisionGateStatus, Direction, MarginMode, OpportunityGrade, PlanStatus,
+from app.services.plan_converter import (
+    to_input as _to_input,
 )
-from shared.schemas import TradePlanInput, TradePlan as TradePlanSchema
+from app.services.plan_converter import (
+    to_risk_out as _to_risk_out,
+)
+from app.services.plan_converter import (
+    to_schema as _to_schema,
+)
+from app.services.plan_converter import (
+    to_sizing_out as _to_sizing_out,
+)
 from decision_gate.gate import decide
 from position_sizing.calculator import calculate as calculate_position
 from risk_engine.checker import check as risk_check
+from shared.enums import (
+    DecisionGateStatus,
+    Direction,
+    MarginMode,
+    OpportunityGrade,
+    PlanStatus,
+)
+from shared.schemas import TradePlan as TradePlanSchema
+from shared.schemas import TradePlanInput
 
 logger = logging.getLogger(__name__)
 
@@ -112,34 +140,81 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         exchange_connected=exchange_connected, db_healthy=db_healthy,
     )
 
-    # AI 评估：拉取 K 线并调用 ai_evaluator，结果落库并参与决策门融合
+    # v0.5 AI 评估：规则评分 + LLM 解释层
     ai_eval_dict: dict | None = None
     ai_model: AIEvaluationResultModel | None = None
+    ai_comprehensive = None
     try:
+        from ai_evaluator import evaluate_with_llm, AIInput, LLMClient
         from app.services.execution_service import _get_exchange
-        from ai_evaluator import evaluate_trade
+        from app.config import settings
         from exchange_adapter import KlineInterval
 
         exchange = _get_exchange()
         interval = KlineInterval.ONE_HOUR
         klines = await exchange.get_klines(model.symbol, interval, limit=100)
         weights = await get_ai_indicator_weights(db)
-        ai_result = evaluate_trade(
+
+        # v0.5: 构建 LLM 客户端（仅在启用时）
+        llm_client: LLMClient | None = None
+        if settings.ai_evaluation_enabled and settings.llm_api_key:
+            llm_client = LLMClient(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_base_url,
+                model=settings.llm_model,
+                timeout_seconds=settings.llm_timeout_seconds,
+            )
+
+        # v0.5: 组装结构化输入
+        ai_input = AIInput(
+            marketStructure={
+                "symbol": model.symbol,
+                "direction": plan_input.direction.value,
+                "entry_price": str(plan_input.entry_price),
+            },
+            candidatePlan={
+                "setup_type": model.setup_type or "",
+                "opportunity_grade": model.opportunity_grade or "",
+                "leverage": str(model.leverage),
+                "risk_percent": str(model.risk_percent),
+                "stop_loss_price": str(model.stop_loss_price) if model.stop_loss_price else None,
+                "take_profit_prices": [str(tp) for tp in (model.take_profit_prices or [])],
+                "notes": model.notes or "",
+            },
+            riskResult={
+                "status": risk.status.value,
+                "risk_amount": str(risk.risk_amount),
+                "notional_value": str(risk.notional_value),
+                "risk_reward_ratio": str(risk.risk_reward_ratio),
+                "warnings": risk.warnings,
+                "block_reasons": risk.block_reasons,
+            },
+            systemMode="L4_CONFIRM_EXECUTION" if exec_enabled else "L4_DRY_RUN",
+        )
+
+        ai_comprehensive = await evaluate_with_llm(
+            ai_input=ai_input,
             symbol=model.symbol,
             direction=plan_input.direction.value,
             entry_price=plan_input.entry_price,
             klines=klines,
             interval=interval,
             weights=weights or None,
+            llm_client=llm_client,
         )
+
         ai_eval_dict = {
-            "grade": ai_result.grade.value,
-            "overall_score": float(ai_result.overall_score),
-            "symbol": ai_result.symbol,
-            "direction": ai_result.direction,
-            "recommendation": ai_result.recommendation,
-            "risk_level": ai_result.risk_level,
+            "grade": ai_comprehensive.grade.value,
+            "overall_score": float(ai_comprehensive.overall_score),
+            "symbol": ai_comprehensive.symbol,
+            "direction": ai_comprehensive.direction,
+            "recommendation": ai_comprehensive.recommendation,
+            "risk_level": ai_comprehensive.risk_level,
+            "source": ai_comprehensive.source.value,
         }
+        # v0.5: 若有 LLM 解释，传入 recommended_action 供 DecisionGate 使用
+        if ai_comprehensive.explanation:
+            ai_eval_dict["recommended_action"] = ai_comprehensive.explanation.recommendedAction.value
     except Exception as e:
         logger.warning("AI 评估失败，跳过融合（plan_id=%s）: %s", plan_id, e)
 
@@ -211,20 +286,34 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
         db.add(decision_model)
 
         # AI 评估结果落库
-        if ai_eval_dict is not None:
+        if ai_eval_dict is not None and ai_comprehensive is not None:
             ai_model = AIEvaluationResultModel(
                 id=uuid4(), trade_plan_id=plan_id,
-                symbol=ai_result.symbol, direction=ai_result.direction,
-                overall_score=ai_result.overall_score, grade=ai_result.grade.value,
-                recommendation=ai_result.recommendation, risk_level=ai_result.risk_level,
-                signals=[s.model_dump(mode="json") for s in ai_result.signals],
-                summary=ai_result.summary, conviction=ai_result.conviction,
+                symbol=ai_comprehensive.symbol, direction=ai_comprehensive.direction,
+                overall_score=ai_comprehensive.overall_score, grade=ai_comprehensive.grade.value,
+                recommendation=ai_comprehensive.recommendation, risk_level=ai_comprehensive.risk_level,
+                signals=[s.model_dump(mode="json") for s in ai_comprehensive.signals],
+                summary=ai_comprehensive.explanation.summary if ai_comprehensive.explanation else "",
+                conviction=ai_comprehensive.conviction,
                 interval=interval.value,
+                source=ai_comprehensive.source.value,
+                recommended_action=ai_comprehensive.explanation.recommendedAction.value if ai_comprehensive.explanation else None,
+                market_state_explanation=ai_comprehensive.explanation.marketStateExplanation if ai_comprehensive.explanation else "",
+                plan_quality_explanation=ai_comprehensive.explanation.planQualityExplanation if ai_comprehensive.explanation else "",
+                risk_explanation=ai_comprehensive.explanation.riskExplanation if ai_comprehensive.explanation else "",
+                opportunity_grade_comment=ai_comprehensive.explanation.opportunityGradeComment if ai_comprehensive.explanation else "",
+                warnings=ai_comprehensive.explanation.warnings if ai_comprehensive.explanation else [],
+                upgrade_conditions=ai_comprehensive.explanation.upgradeConditions if ai_comprehensive.explanation else [],
+                invalidation_conditions=ai_comprehensive.explanation.invalidationConditions if ai_comprehensive.explanation else [],
+                emotional_risk_flags=ai_comprehensive.explanation.emotionalRiskFlags if ai_comprehensive.explanation else [],
             )
             db.add(ai_model)
 
         if decision.result == DecisionGateStatus.ALLOW_CONFIRM:
             model.status = PlanStatus.READY_FOR_CONFIRMATION.value
+            # P0-3: 生成二次确认挑战（plan_hash + token + TTL）
+            from app.services.confirmation_service import generate_confirmation
+            generate_confirmation(model)
         else:
             model.status = PlanStatus.CHECKED.value
 
@@ -255,5 +344,15 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
             "summary": ai_model.summary,
             "conviction": str(ai_model.conviction),
             "signals": ai_model.signals,
+            "source": ai_model.source,
+            "recommended_action": ai_model.recommended_action,
+            "market_state_explanation": ai_model.market_state_explanation,
+            "plan_quality_explanation": ai_model.plan_quality_explanation,
+            "risk_explanation": ai_model.risk_explanation,
+            "opportunity_grade_comment": ai_model.opportunity_grade_comment,
+            "warnings": ai_model.warnings,
+            "upgrade_conditions": ai_model.upgrade_conditions,
+            "invalidation_conditions": ai_model.invalidation_conditions,
+            "emotional_risk_flags": ai_model.emotional_risk_flags,
         }
     return result

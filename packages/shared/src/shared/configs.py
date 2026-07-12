@@ -1,4 +1,5 @@
 from decimal import Decimal
+
 from pydantic import BaseModel
 
 from shared.enums import MarginMode, OrderType
@@ -52,6 +53,9 @@ class SymbolRule(BaseModel):
     min_notional: Decimal
     max_leverage: Decimal
     fee_rate: Decimal
+    # P1-2: 滑点和资金费率纳入最大损失约束
+    slippage_rate: Decimal = Decimal("0.0005")  # 默认 0.05%
+    funding_rate: Decimal = Decimal("0.0001")  # 默认 0.01%（8h 资金费率）
 
 
 class SymbolRules(BaseModel):

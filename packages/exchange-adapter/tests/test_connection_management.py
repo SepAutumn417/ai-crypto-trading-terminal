@@ -10,10 +10,11 @@ TDD 纪律：先写测试看到失败，再写实现。
 5. test_connection_pool_config — httpx.AsyncClient 创建时带连接池 limits
 6. test_aenter_aexit_context_manager — async with exchange as e 可用
 """
-import pytest
-import httpx
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import httpx
+import pytest
 
 from exchange_adapter import BitgetExchange
 

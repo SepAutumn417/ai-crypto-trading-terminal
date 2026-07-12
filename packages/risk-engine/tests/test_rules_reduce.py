@@ -1,11 +1,16 @@
 from decimal import Decimal
+
+from risk_engine.checker import check
 from shared.account import AccountRiskState
 from shared.configs import ExecutionConfig, OpportunityGradeConfig, RiskConfig
 from shared.enums import (
-    Direction, MarginMode, OpportunityGrade, OrderType, RiskStatus,
+    Direction,
+    MarginMode,
+    OpportunityGrade,
+    OrderType,
+    RiskStatus,
 )
 from shared.schemas import PositionSizingResult, TradePlanInput
-from risk_engine.checker import check
 
 
 def _cfgs():
@@ -36,8 +41,9 @@ def _sizing():
         stop_distance_percent=Decimal("0.008"), notional_value=Decimal("1872"),
         raw_size=Decimal("0.03"), rounded_size=Decimal("0.030"),
         required_margin=Decimal("187.2"), leverage=Decimal("10"),
-        estimated_fee=Decimal("0.936"), risk_reward_ratio=Decimal("2.8"),
-        estimated_loss_at_stop=Decimal("15.936"), sizing_warnings=[],
+        estimated_fee=Decimal("1.872"), risk_reward_ratio=Decimal("2.8"),
+        estimated_loss_at_stop=Decimal("17.9952"), sizing_warnings=[],
+        estimated_slippage=Decimal("0.936"), estimated_funding=Decimal("0.1872"),
     )
 
 

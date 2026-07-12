@@ -39,7 +39,6 @@ def detect_swings(
         k = klines[i]
         left = klines[i - left_bars : i]
         right = klines[i + 1 : i + 1 + right_bars]
-        neighbors = left + right
 
         # Swing High: k.high 是窗口内最高
         left_max = max(nk.high for nk in left)

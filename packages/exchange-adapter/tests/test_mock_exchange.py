@@ -1,7 +1,8 @@
-import pytest
 from decimal import Decimal
 
-from exchange_adapter import MockExchange, KlineInterval, OrderSide, OrderType
+import pytest
+
+from exchange_adapter import KlineInterval, MockExchange, OrderSide, OrderType
 
 
 @pytest.fixture

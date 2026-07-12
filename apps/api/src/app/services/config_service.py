@@ -1,15 +1,24 @@
 from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
     AccountRiskState as AccountRiskStateModel,
-    ConfigVersionModel, UserSettings as UserSettingsModel,
+)
+from app.models import (
+    ConfigVersionModel,
+)
+from app.models import (
+    UserSettings as UserSettingsModel,
 )
 from shared.account import AccountRiskState, UserSettings
 from shared.configs import (
-    ExecutionConfig, OpportunityGradeConfig, RiskConfig,
-    SymbolRule, SymbolRules,
+    ExecutionConfig,
+    OpportunityGradeConfig,
+    RiskConfig,
+    SymbolRule,
+    SymbolRules,
 )
 from shared.enums import ConfigType, MarginMode, OrderType
 
@@ -115,6 +124,9 @@ async def get_active_symbol_rules(db: AsyncSession) -> tuple[SymbolRules, str]:
             min_notional=_parse_decimal(r["min_notional"]),
             max_leverage=_parse_decimal(r["max_leverage"]),
             fee_rate=_parse_decimal(r["fee_rate"]),
+            # P1-2: 滑点和资金费率（向后兼容，旧配置无此字段时使用默认值）
+            slippage_rate=_parse_decimal(r.get("slippage_rate", "0.0005")),
+            funding_rate=_parse_decimal(r.get("funding_rate", "0.0001")),
         )
         for sym, r in p.items()
     }

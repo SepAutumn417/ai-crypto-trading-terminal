@@ -10,11 +10,14 @@ zone 的强度 = 聚合的 swing 点数量。
 """
 from __future__ import annotations
 
+from datetime import UTC
 from decimal import Decimal
 from typing import Any
 
 from exchange_adapter import Kline
 
+from .structure import detect_bos_choch
+from .swing import detect_swings
 from .types import (
     BosEvent,
     ChochEvent,
@@ -25,8 +28,6 @@ from .types import (
     SwingType,
     TrendDirection,
 )
-from .structure import detect_bos_choch
-from .swing import detect_swings
 
 
 def detect_zones(
@@ -220,7 +221,7 @@ def analyze_structure(
     return StructureSnapshot(
         symbol=symbol,
         timeframe=timeframe,
-        captured_at=datetime.now(timezone.utc),
+        captured_at=datetime.now(UTC),
         kline_count=len(klines),
         kline_start=klines[0].timestamp if klines else None,
         kline_end=klines[-1].timestamp if klines else None,

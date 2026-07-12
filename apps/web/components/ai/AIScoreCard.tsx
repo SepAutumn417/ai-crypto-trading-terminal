@@ -36,7 +36,7 @@ export function AIScoreCard({ data, loading }: AIScoreCardProps) {
   if (!data) {
     return (
       <div className="bg-gray-900 rounded-lg p-6 text-center text-gray-500">
-        输入参数以获取 AI 评估
+        输入参数以获取指标评分
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function AIScoreCard({ data, loading }: AIScoreCardProps) {
     <div className={`rounded-lg p-6 border ${gradeBgClass}`}>
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="text-gray-400 text-sm">AI 机会评分</div>
+          <div className="text-gray-400 text-sm">指标综合评分</div>
           <div className="text-4xl font-bold mt-1">
             {data.grade}
             <span className="text-lg text-gray-400 ml-2">{data.recommendation}</span>

@@ -1,9 +1,10 @@
-import pytest
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
-from exchange_adapter import BitgetExchange, KlineInterval, OrderSide, OrderType, OrderStatus
+import pytest
+
+from exchange_adapter import BitgetExchange, KlineInterval, OrderSide, OrderStatus, OrderType
 
 
 @pytest.fixture
@@ -41,7 +42,7 @@ async def test_get_ticker_parses_correctly(exchange):
     assert ticker.high_24h == Decimal("66000")
     assert ticker.low_24h == Decimal("64000")
     assert ticker.change_percent_24h == Decimal("2.5")
-    assert ticker.timestamp == datetime.fromtimestamp(1700000000, tz=timezone.utc)
+    assert ticker.timestamp == datetime.fromtimestamp(1700000000, tz=UTC)
 
 
 @pytest.mark.asyncio

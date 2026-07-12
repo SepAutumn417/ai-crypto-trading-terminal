@@ -1,6 +1,11 @@
 from shared.enums import (
-    ConfigType, DecisionGateStatus, Direction, MarginMode,
-    OpportunityGrade, PlanStatus, RiskStatus,
+    ConfigType,
+    DecisionGateStatus,
+    Direction,
+    MarginMode,
+    OpportunityGrade,
+    PlanStatus,
+    RiskStatus,
 )
 
 

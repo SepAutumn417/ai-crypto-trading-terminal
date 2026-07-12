@@ -11,7 +11,7 @@ async def test_create_journal(client):
         "quantity": "0.1",
         "leverage": "10",
     })
-    assert resp.status_code == 200
+    assert resp.status_code == 200, resp.text
     data = resp.json()["data"]
     assert data["symbol"] == "BTCUSDT"
     assert data["direction"] == "LONG"

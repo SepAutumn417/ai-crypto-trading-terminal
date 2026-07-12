@@ -7,12 +7,19 @@ from decimal import Decimal
 
 from app.models import (
     DecisionGateResult as DecisionGateResultModel,
+)
+from app.models import (
     PositionSizingResult as PositionSizingResultModel,
+)
+from app.models import (
     RiskCheck as RiskCheckModel,
+)
+from app.models import (
     TradePlan as TradePlanModel,
 )
 from shared.enums import Direction, MarginMode, OpportunityGrade, PlanStatus
-from shared.schemas import TradePlan as TradePlanSchema, TradePlanInput
+from shared.schemas import TradePlan as TradePlanSchema
+from shared.schemas import TradePlanInput
 
 
 def to_schema(m: TradePlanModel) -> TradePlanSchema:

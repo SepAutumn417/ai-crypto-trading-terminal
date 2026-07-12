@@ -2,10 +2,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from shared.enums import (
-    DecisionGateStatus, Direction, MarginMode, OpportunityGrade, PlanStatus, RiskStatus,
+    DecisionGateStatus,
+    Direction,
+    MarginMode,
+    OpportunityGrade,
+    PlanStatus,
+    RiskStatus,
 )
 
 

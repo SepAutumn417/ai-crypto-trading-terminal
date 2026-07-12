@@ -1,20 +1,28 @@
+"""技术指标评分器（非 AI 模型）。
+
+P1-2: 此模块基于 RSI、MACD、布林带、均线(SMA20/SMA50)和成交量的固定规则加权评分。
+没有机器学习模型、训练数据、参数校准或回测验证。
+评分仅作为交易参考，不构成交易建议，也不保证具有统计意义上的交易优势。
+
+包名保留 ai_evaluator 以保持向后兼容，但本质是技术指标规则评分器。
+"""
 from decimal import Decimal
-from typing import List
 
 from exchange_adapter import Kline, KlineInterval
 from shared.enums import Direction
+
+from .indicators import (
+    bollinger_bands,
+    get_closes,
+    macd,
+    rsi,
+    sma,
+)
 from .types import (
     AIEvaluationResult,
     EvaluationGrade,
     IndicatorResult,
     SignalType,
-)
-from .indicators import (
-    rsi,
-    macd,
-    bollinger_bands,
-    sma,
-    get_closes,
 )
 
 # 指标权重默认值；可被 evaluate_trade(weights=...) 覆盖
@@ -40,7 +48,7 @@ def _score_to_signal(score: Decimal) -> SignalType:
         return SignalType.STRONG_SELL
 
 
-def _evaluate_rsi(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["rsi"]) -> IndicatorResult:
+def _evaluate_rsi(closes: list[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["rsi"]) -> IndicatorResult:
     rsi_values = rsi(closes, 14)
     if not rsi_values:
         return IndicatorResult(
@@ -96,7 +104,7 @@ def _evaluate_rsi(closes: List[Decimal], direction: str, weight: Decimal = DEFAU
     )
 
 
-def _evaluate_macd(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["macd"]) -> IndicatorResult:
+def _evaluate_macd(closes: list[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["macd"]) -> IndicatorResult:
     macd_line, signal_line, hist = macd(closes, 12, 26, 9)
     if not hist or len(hist) < 2:
         return IndicatorResult(
@@ -157,7 +165,7 @@ def _evaluate_macd(closes: List[Decimal], direction: str, weight: Decimal = DEFA
     )
 
 
-def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["bollinger"]) -> IndicatorResult:
+def _evaluate_bollinger(klines: list[Kline], closes: list[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["bollinger"]) -> IndicatorResult:
     upper, middle, lower = bollinger_bands(closes, 20, Decimal("2"))
     if not upper:
         return IndicatorResult(
@@ -170,7 +178,6 @@ def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: s
 
     current_price = closes[-1]
     current_upper = upper[-1]
-    current_middle = middle[-1]
     current_lower = lower[-1]
     band_width = current_upper - current_lower
 
@@ -219,7 +226,7 @@ def _evaluate_bollinger(klines: List[Kline], closes: List[Decimal], direction: s
     )
 
 
-def _evaluate_trend(closes: List[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["trend"]) -> IndicatorResult:
+def _evaluate_trend(closes: list[Decimal], direction: str, weight: Decimal = DEFAULT_WEIGHTS["trend"]) -> IndicatorResult:
     sma_20 = sma(closes, 20)
     sma_50 = sma(closes, 50)
 
@@ -283,7 +290,7 @@ def _evaluate_trend(closes: List[Decimal], direction: str, weight: Decimal = DEF
     )
 
 
-def _evaluate_volume(klines: List[Kline], direction: str, weight: Decimal = DEFAULT_WEIGHTS["volume"]) -> IndicatorResult:
+def _evaluate_volume(klines: list[Kline], direction: str, weight: Decimal = DEFAULT_WEIGHTS["volume"]) -> IndicatorResult:
     if len(klines) < 20:
         return IndicatorResult(
             name="Volume",
@@ -349,7 +356,7 @@ def evaluate_trade(
     symbol: str,
     direction: str,
     entry_price: Decimal,
-    klines: List[Kline],
+    klines: list[Kline],
     interval: KlineInterval = KlineInterval.ONE_HOUR,
     weights: dict[str, Decimal] | None = None,
 ) -> AIEvaluationResult:
@@ -374,7 +381,7 @@ def evaluate_trade(
         # 权重全 0 或负数时降级为等权平均，避免除零崩溃
         weighted_score = sum(s.score for s in signals) / Decimal(len(signals)) if signals else Decimal("0")
     else:
-        weighted_score = sum(s.score * s.weight for s in signals) / total_weight
+        weighted_score = sum((s.score * s.weight for s in signals), Decimal("0")) / total_weight
 
     # P1-18: 利用 entry_price 与最新收盘价对比，调整评分
     # 做多时入场价低于当前价（买在低位）加分，高于当前价减分；做空反之

@@ -14,6 +14,7 @@ class SystemStatus(BaseModel):
 
 class KillSwitchRequest(BaseModel):
     enabled: bool
+    reason: str | None = None  # P0-5: 审计原因（激活/解除时记录）
 
 
 class ExecutionModeRequest(BaseModel):

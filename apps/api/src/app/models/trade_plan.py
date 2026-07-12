@@ -3,7 +3,8 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -42,5 +43,10 @@ class TradePlan(Base):
     execution_error_code: Mapped[str] = mapped_column(String(64), nullable=True)
     execution_retryable: Mapped[bool] = mapped_column(Boolean, nullable=True)
     execution_retry_after_seconds: Mapped[int] = mapped_column(Integer, nullable=True)
+    # P0-3: 服务端二次确认字段
+    confirmation_token: Mapped[str] = mapped_column(String(64), nullable=True)
+    plan_hash: Mapped[str] = mapped_column(String(128), nullable=True)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    confirmation_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

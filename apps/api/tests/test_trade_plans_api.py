@@ -25,10 +25,28 @@ async def test_check_plan_allows(client):
     })
     plan_id = resp.json()["data"]["id"]
 
-    await client.post("/api/system/execution-mode", json={"enabled": True})
+    # P0-5: 先解除 Kill Switch，再开启 Execution Mode
     await client.post("/api/system/kill-switch", json={"enabled": False})
+    await client.post("/api/system/execution-mode", json={"enabled": True})
 
-    resp = await client.post(f"/api/trade-plans/{plan_id}/check")
+    # Mock AI 评估返回 A 级，避免 MockExchange 正弦波数据导致 D 级降级为 WAIT
+    from unittest.mock import patch, MagicMock
+    from decimal import Decimal
+    from ai_evaluator.types import EvaluationGrade
+    fake_ai = MagicMock()
+    fake_ai.grade = EvaluationGrade.A
+    fake_ai.overall_score = Decimal("80")
+    fake_ai.symbol = "BTCUSDT"
+    fake_ai.direction = "LONG"
+    fake_ai.recommendation = "强烈推荐"
+    fake_ai.risk_level = "低"
+    fake_ai.signals = []
+    fake_ai.summary = "mock"
+    fake_ai.conviction = Decimal("80")
+
+    with patch("ai_evaluator.evaluate_trade", return_value=fake_ai):
+        resp = await client.post(f"/api/trade-plans/{plan_id}/check")
+
     body = resp.json()["data"]
     assert body["decision"]["result"] == "ALLOW_CONFIRM"
     assert body["plan"]["status"] == "READY_FOR_CONFIRMATION"

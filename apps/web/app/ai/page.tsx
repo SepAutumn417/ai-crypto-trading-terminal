@@ -37,7 +37,11 @@ export default function AIPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">AI 智能评估</h1>
+      <h1 className="text-2xl font-bold">技术指标评分</h1>
+      <p className="text-sm text-gray-500">
+        基于 RSI、MACD、布林带、均线和成交量的固定规则加权评分，非 AI 模型预测。
+        评分仅作为参考，不构成交易建议。
+      </p>
 
       {isError && (
         <p className="text-red-400 text-sm">评估失败：{(error as Error).message}</p>
@@ -133,7 +137,7 @@ export default function AIPage() {
               <SignalList signals={evaluation.signals} />
             ) : (
               <div className="text-gray-500 text-center py-8">
-                点击"开始评估"查看详细指标分析
+                点击「开始评估」查看详细指标分析
               </div>
             )}
           </div>

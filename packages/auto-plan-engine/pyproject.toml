@@ -12,6 +12,11 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/auto_plan_engine"]
 
+[tool.uv.sources]
+exchange-adapter = { workspace = true }
+shared = { workspace = true }
+market-structure = { workspace = true }
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

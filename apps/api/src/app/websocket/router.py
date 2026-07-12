@@ -53,18 +53,26 @@ def _is_origin_allowed(origin: str | None) -> bool:
     return origin in settings.cors_origins
 
 
-def _validate_token(token: str | None) -> bool:
-    """P1-9: 校验 WebSocket 连接 token。
+def _validate_token(token: str | None, client_host: str | None = None) -> bool:
+    """P0-2: 校验 WebSocket 连接 token（fail-closed 策略）。
 
-    v0.2 阶段无完整 auth 体系，使用简单 token 校验：
-    - 如果 settings.ws_token 未设置，允许所有连接（开发模式）
-    - 如果 settings.ws_token 已设置，要求 token 匹配
+    安全策略：
+    - 如果 settings.ws_token 已设置 → 要求 token 匹配（严格模式）
+    - 如果 settings.ws_token 未设置 → 仅允许 localhost 连接（开发模式）
+    - 使用 secrets.compare_digest 防止时序攻击
     """
-    ws_token = getattr(settings, "ws_token", None)
-    if not ws_token:
-        # 开发模式：未配置 token 则允许所有连接
+    import secrets as _secrets
+
+    ws_token = settings.ws_token
+    if ws_token:
+        if token and _secrets.compare_digest(token, ws_token):
+            return True
+        return False
+
+    # ws_token 未配置：仅允许 localhost 连接
+    if client_host and client_host in ("127.0.0.1", "::1", "localhost"):
         return True
-    return token == ws_token
+    return False
 
 
 @router.websocket("/api/ws")
@@ -79,9 +87,10 @@ async def websocket_endpoint(
         await ws.close(code=4403, reason="Origin not allowed")
         return
 
-    # P1-9: Token 鉴权
-    if not _validate_token(token):
-        logger.warning("WS rejected: invalid or missing token")
+    # P0-2: Token 鉴权（fail-closed：未配置 token 时仅允许 localhost）
+    client_host = ws.client.host if ws.client else None
+    if not _validate_token(token, client_host):
+        logger.warning("WS rejected: invalid or missing token, host=%s", client_host)
         await ws.close(code=4401, reason="Unauthorized")
         return
 

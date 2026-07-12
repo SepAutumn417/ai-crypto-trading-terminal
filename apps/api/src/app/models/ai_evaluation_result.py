@@ -3,7 +3,8 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Numeric, String, func, text
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PgUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -39,9 +40,20 @@ class AIEvaluationResultModel(Base):
     grade: Mapped[str] = mapped_column(String(2), nullable=False)
     recommendation: Mapped[str] = mapped_column(String(32), nullable=False)
     risk_level: Mapped[str] = mapped_column(String(16), nullable=False)
-    signals: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    summary: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
+    signals: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    summary: Mapped[str] = mapped_column(String(1024), nullable=False, default="", server_default=text("''"))
     conviction: Mapped[Decimal] = mapped_column(Numeric(6, 2), nullable=False)
     interval: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # v0.5: LLM 解释层字段
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="rule_based", server_default=text("'rule_based'"))
+    recommended_action: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    market_state_explanation: Mapped[str] = mapped_column(String(2048), nullable=False, default="", server_default=text("''"))
+    plan_quality_explanation: Mapped[str] = mapped_column(String(2048), nullable=False, default="", server_default=text("''"))
+    risk_explanation: Mapped[str] = mapped_column(String(2048), nullable=False, default="", server_default=text("''"))
+    opportunity_grade_comment: Mapped[str] = mapped_column(String(1024), nullable=False, default="", server_default=text("''"))
+    warnings: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    upgrade_conditions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    invalidation_conditions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
+    emotional_risk_flags: Mapped[list] = mapped_column(JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb"))
     is_latest: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

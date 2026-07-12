@@ -1,6 +1,6 @@
 // 自动生成的类型（由 openapi-typescript 从 FastAPI OpenAPI schema 生成）
 // 运行 `pnpm --filter web generate-types` 重新生成（需先 `python scripts/export_openapi.py`）
-import type { components } from './api-types';
+import type { components, AIExplanation, ComprehensiveAIEvaluation } from './api-types';
 
 type Schema = components['schemas'];
 
@@ -14,6 +14,9 @@ export type OpportunityGrade = Schema['OpportunityGrade'];
 // AI 评估相关类型已与生成类型完全匹配，直接复用
 export type AIIndicatorSignal = Schema['IndicatorResult'];
 export type AIEvaluationResult = Schema['AIEvaluationResult'];
+
+// AI 综合评估与结构化解释类型（手动补充于 api-types.ts）
+export type { AIExplanation, ComprehensiveAIEvaluation };
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -508,6 +511,13 @@ export const api = {
     if (params.limit) qs.set('limit', String(params.limit));
     return request<AIEvaluationResult>(`/api/ai/evaluate?${qs.toString()}`);
   },
+  evaluatePlan: (planId: string) =>
+    request<ComprehensiveAIEvaluation>(`/api/ai/evaluate-plan/${planId}`, { method: 'POST' }),
+  reviewTrade: (journalId: string) =>
+    request<{ summary: string; emotionalAnalysis?: string; lessonSummary?: string; improvementSuggestions?: string[]; source: string }>(
+      `/api/ai/review-trade/${journalId}`,
+      { method: 'POST' },
+    ),
   scanCandidates: (symbol: string, interval: KlineInterval = '1h', limit: number = 200) => {
     const qs = new URLSearchParams();
     qs.set('symbol', symbol);

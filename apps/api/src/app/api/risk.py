@@ -4,26 +4,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_db
 from app.response import ApiResponse
 from app.schemas.trade_plan import (
-    CalculatePositionRequest, RiskCheckRequest,
+    CalculatePositionRequest,
+    RiskCheckRequest,
 )
+from app.security import require_auth
 from app.services.config_service import (
-    get_active_execution_config, get_active_opportunity_grade_config,
-    get_active_risk_config, get_account_risk_state, get_symbol_rule, get_user_settings,
+    get_account_risk_state,
+    get_active_execution_config,
+    get_active_opportunity_grade_config,
+    get_active_risk_config,
+    get_symbol_rule,
+    get_user_settings,
 )
 from position_sizing.calculator import calculate as calculate_position
 from risk_engine.checker import check as risk_check
 from shared.schemas import (
     PositionSizingResult as PositionSizingSchema,
+)
+from shared.schemas import (
     TradePlanInput,
 )
-
 
 router = APIRouter(prefix="/api/risk", tags=["risk"])
 
 
 @router.post("/calculate-position")
 async def calculate_position_endpoint(
-    body: CalculatePositionRequest, db: AsyncSession = Depends(get_db),
+    body: CalculatePositionRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth),
 ) -> dict:
     try:
         rule = await get_symbol_rule(db, body.symbol)
@@ -53,7 +60,7 @@ async def calculate_position_endpoint(
 
 @router.post("/check")
 async def risk_check_endpoint(
-    body: RiskCheckRequest, db: AsyncSession = Depends(get_db),
+    body: RiskCheckRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth),
 ) -> dict:
     plan_input = TradePlanInput(
         exchange=body.plan.exchange, symbol=body.plan.symbol,

@@ -21,7 +21,7 @@ export default function JournalPage() {
     queryFn: () => api.getJournalSummary(filter.symbol),
   });
 
-  const { data: listData, isLoading, isError: listError, error } = useQuery({
+  const { data: listData, isError: listError, error } = useQuery({
     queryKey: ['journals', filter, page],
     queryFn: () => api.getJournals({ ...filter, page, page_size: pageSize }),
     // P1-17: WS 断开时 HTTP 兜底轮询

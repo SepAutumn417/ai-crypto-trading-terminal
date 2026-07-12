@@ -14,12 +14,6 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getWsClient, type WSMessage } from './wsClient';
 
-interface Invalidator {
-  queryKeys: string[];
-  // 可选：自定义处理消息（如直接更新 cache）
-  onMessage?: (msg: WSMessage, qc: ReturnType<typeof useQueryClient>) => void;
-}
-
 /**
  * 订阅频道，收到消息时 invalidate 指定 query keys。
  *

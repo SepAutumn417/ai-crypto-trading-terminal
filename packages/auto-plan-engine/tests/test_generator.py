@@ -6,16 +6,6 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
-from market_structure import (
-    BosEvent,
-    ChochEvent,
-    MarketState,
-    PriceZone,
-    StructureSnapshot,
-    SwingPoint,
-    SwingType,
-    TrendDirection,
-)
 
 from auto_plan_engine import (
     CandidateDirection,
@@ -30,7 +20,16 @@ from auto_plan_engine import (
     is_terminal,
     transition,
 )
-
+from market_structure import (
+    BosEvent,
+    ChochEvent,
+    MarketState,
+    PriceZone,
+    StructureSnapshot,
+    SwingPoint,
+    SwingType,
+    TrendDirection,
+)
 
 # ---------------------------------------------------------------------------
 # 测试数据工厂

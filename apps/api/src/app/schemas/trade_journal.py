@@ -2,7 +2,8 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TradeJournalCreate(BaseModel):
@@ -38,6 +39,8 @@ class TradeJournalUpdate(BaseModel):
 
 
 class TradeJournalOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     trade_plan_id: UUID | None
     exchange: str

@@ -47,7 +47,7 @@ class WsClient {
 
     try {
       this.ws = new WebSocket(this.url);
-    } catch (e) {
+    } catch {
       this.isConnecting = false;
       this.scheduleReconnect();
       return;

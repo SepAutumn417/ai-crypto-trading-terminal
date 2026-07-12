@@ -1,19 +1,19 @@
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Optional, TYPE_CHECKING
-import hmac
-import hashlib
 import base64
+import hashlib
+import hmac
 import json
 import logging
+from datetime import UTC, datetime, timezone
+from decimal import Decimal
+from typing import TYPE_CHECKING, Optional
 
 import httpx
 from tenacity import (
+    before_sleep_log,
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
-    before_sleep_log,
 )
 
 from .base import Exchange
@@ -22,16 +22,15 @@ from .types import (
     Kline,
     KlineInterval,
     Order,
+    Orderbook,
+    OrderbookLevel,
     OrderSide,
     OrderStatus,
     OrderType,
-    Orderbook,
-    OrderbookLevel,
     Position,
     PositionSide,
     Ticker,
 )
-
 
 if TYPE_CHECKING:
     pass
@@ -78,17 +77,17 @@ class BitgetExchange(Exchange):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
-        api_secret: Optional[str] = None,
-        passphrase: Optional[str] = None,
-        base_url: Optional[str] = None,
+        api_key: str | None = None,
+        api_secret: str | None = None,
+        passphrase: str | None = None,
+        base_url: str | None = None,
     ):
         self.api_key = api_key
         self.api_secret = api_secret
         self.passphrase = passphrase
         self.base_url = base_url or self.BASE_URL
-        self._client: Optional[httpx.AsyncClient] = None
-        self._transport: Optional[httpx.MockTransport] = None
+        self._client: httpx.AsyncClient | None = None
+        self._transport: httpx.MockTransport | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -105,7 +104,7 @@ class BitgetExchange(Exchange):
             await self._client.aclose()
         self._client = None
 
-    async def _sign(self, timestamp: str, method: str, path: str, body: Optional[str] = None) -> str:
+    async def _sign(self, timestamp: str, method: str, path: str, body: str | None = None) -> str:
         if not self.api_secret:
             raise ValueError("API secret is required for private endpoints")
         message = f"{timestamp}{method.upper()}{path}{body or ''}"
@@ -127,8 +126,8 @@ class BitgetExchange(Exchange):
         self,
         method: str,
         path: str,
-        params: Optional[dict] = None,
-        body: Optional[dict] = None,
+        params: dict | None = None,
+        body: dict | None = None,
         is_private: bool = False,
     ) -> dict:
         url = f"{self.base_url}{path}"
@@ -138,7 +137,7 @@ class BitgetExchange(Exchange):
         # 预先序列化 body 和 query string，确保签名与实际发送完全一致
         # httpx 的 json= 参数默认用 json.dumps(body)（带空格），params= 按插入序拼接
         # 签名必须使用与实际发送相同的字符串，否则 Bitget 会返回签名校验失败
-        body_str: Optional[str] = None
+        body_str: str | None = None
         if body is not None:
             body_str = json.dumps(body, separators=(',', ':'))
 
@@ -151,7 +150,7 @@ class BitgetExchange(Exchange):
             if not self.api_key or not self.passphrase:
                 raise ValueError("API key and passphrase are required for private endpoints")
 
-            timestamp = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+            timestamp = str(int(datetime.now(UTC).timestamp() * 1000))
             sign_path = path + query_string
             signature = await self._sign(timestamp, method, sign_path, body_str or "")
 
@@ -175,7 +174,7 @@ class BitgetExchange(Exchange):
 
         # P1-5: 处理 429 速率限制
         if resp.status_code == 429:
-            raise httpx.RemoteProtocolError(f"Bitget rate limit exceeded (429)")
+            raise httpx.RemoteProtocolError("Bitget rate limit exceeded (429)")
 
         if resp.status_code >= 500:
             raise httpx.RemoteProtocolError(f"Bitget server error: {resp.status_code}")
@@ -200,7 +199,7 @@ class BitgetExchange(Exchange):
             low_24h=Decimal(str(data["low24h"])) if data.get("low24h") else None,
             volume_24h=Decimal(str(data["baseVolume"])) if data.get("baseVolume") else None,
             change_percent_24h=Decimal(str(data["changePercent"])) if data.get("changePercent") else None,
-            timestamp=datetime.fromtimestamp(int(data["ts"]) / 1000, tz=timezone.utc) if data.get("ts") else None,
+            timestamp=datetime.fromtimestamp(int(data["ts"]) / 1000, tz=UTC) if data.get("ts") else None,
         )
 
     async def get_klines(
@@ -208,8 +207,8 @@ class BitgetExchange(Exchange):
         symbol: str,
         interval: KlineInterval,
         limit: int = 100,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> list[Kline]:
         params = {
             "symbol": symbol,
@@ -227,7 +226,7 @@ class BitgetExchange(Exchange):
         for item in data:
             ts_ms = int(item[0])
             klines.append(Kline(
-                timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc),
+                timestamp=datetime.fromtimestamp(ts_ms / 1000, tz=UTC),
                 open=Decimal(str(item[1])),
                 high=Decimal(str(item[2])),
                 low=Decimal(str(item[3])),
@@ -249,7 +248,7 @@ class BitgetExchange(Exchange):
             symbol=symbol,
             bids=bids,
             asks=asks,
-            timestamp=datetime.fromtimestamp(int(data["ts"]) / 1000, tz=timezone.utc) if data.get("ts") else None,
+            timestamp=datetime.fromtimestamp(int(data["ts"]) / 1000, tz=UTC) if data.get("ts") else None,
         )
 
     async def get_balances(self) -> list[Balance]:
@@ -271,7 +270,7 @@ class BitgetExchange(Exchange):
                 ))
         return balances
 
-    async def get_positions(self, symbol: Optional[str] = None) -> list[Position]:
+    async def get_positions(self, symbol: str | None = None) -> list[Position]:
         params = {"productType": "usdt-futures"}
         if symbol:
             params["symbol"] = symbol
@@ -297,14 +296,14 @@ class BitgetExchange(Exchange):
                     margin_type=item.get("marginMode", "isolated"),
                     liquidation_price=Decimal(str(item.get("liquidationPrice", "0"))) if item.get("liquidationPrice") else None,
                     margin=Decimal(str(item.get("margin", "0"))) if item.get("margin") else None,
-                    updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=timezone.utc) if item.get("uTime") else None,
+                    updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=UTC) if item.get("uTime") else None,
                 ))
         return positions
 
     async def get_orders(
         self,
         symbol: str,
-        status: Optional[OrderStatus] = None,
+        status: OrderStatus | None = None,
         limit: int = 50,
     ) -> list[Order]:
         params = {
@@ -349,6 +348,24 @@ class BitgetExchange(Exchange):
         )
         return self._parse_order(data)
 
+    async def get_order_by_client_id(self, symbol: str, client_order_id: str) -> Order | None:
+        """P0-4: 按 clientOid 查询订单，用于网络超时后的对账恢复。
+
+        Bitget V2 /api/v2/mix/order/detail 接受 clientOid 参数。
+        如果订单不存在返回 None。
+        """
+        try:
+            data = await self._request(
+                "GET", "/api/v2/mix/order/detail",
+                params={"symbol": symbol, "clientOid": client_order_id, "productType": "usdt-futures"},
+                is_private=True,
+            )
+            if not data or not data.get("orderId"):
+                return None
+            return self._parse_order(data)
+        except Exception:
+            return None
+
     def _parse_order(self, item: dict) -> Order:
         state = item.get("state", "")
         status_map = {
@@ -381,8 +398,8 @@ class BitgetExchange(Exchange):
             average_fill_price=Decimal(str(item.get("priceAvg", "0"))) if item.get("priceAvg") else None,
             stop_price=Decimal(str(item.get("stopPrice", "0"))) if item.get("stopPrice") else None,
             client_order_id=item.get("clientOid") or None,
-            created_at=datetime.fromtimestamp(int(item.get("cTime", "0")) / 1000, tz=timezone.utc) if item.get("cTime") else None,
-            updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=timezone.utc) if item.get("uTime") else None,
+            created_at=datetime.fromtimestamp(int(item.get("cTime", "0")) / 1000, tz=UTC) if item.get("cTime") else None,
+            updated_at=datetime.fromtimestamp(int(item.get("uTime", "0")) / 1000, tz=UTC) if item.get("uTime") else None,
         )
 
     async def place_order(
@@ -391,18 +408,23 @@ class BitgetExchange(Exchange):
         side: OrderSide,
         order_type: OrderType,
         quantity: Decimal,
-        price: Optional[Decimal] = None,
-        stop_price: Optional[Decimal] = None,
-        take_profit_price: Optional[Decimal] = None,
-        stop_loss_price: Optional[Decimal] = None,
-        client_order_id: Optional[str] = None,
+        price: Decimal | None = None,
+        stop_price: Decimal | None = None,
+        take_profit_price: Decimal | None = None,
+        stop_loss_price: Decimal | None = None,
+        client_order_id: str | None = None,
+        margin_mode: str | None = None,
+        margin_coin: str | None = None,
     ) -> Order:
+        # P0-1: Bitget V2 API 要求在下单请求中携带 marginMode 和 marginCoin
         body: dict = {
             "symbol": symbol,
             "productType": "usdt-futures",
             "side": side.value,
             "orderType": order_type.value,
             "size": str(quantity),
+            "marginMode": _normalize_margin_mode(margin_mode) if margin_mode else "crossed",
+            "marginCoin": margin_coin or "USDT",
         }
 
         if price is not None:
@@ -414,15 +436,12 @@ class BitgetExchange(Exchange):
         if stop_price is not None:
             body["stopPrice"] = str(stop_price)
 
-        preset_take_stop = {}
+        # P0-1: 使用 Bitget 官方文档的扁平参数 presetStopSurplusPrice/presetStopLossPrice
+        # 而非未文档化的嵌套结构 presetTakeProfitStopLoss
         if take_profit_price is not None:
-            preset_take_stop["takeProfitPrice"] = str(take_profit_price)
-            preset_take_stop["takeProfitType"] = "2"  # 限价止盈
+            body["presetStopSurplusPrice"] = str(take_profit_price)
         if stop_loss_price is not None:
-            preset_take_stop["stopLossPrice"] = str(stop_loss_price)
-            preset_take_stop["stopLossType"] = "2"  # 限价止损
-        if preset_take_stop:
-            body["presetTakeProfitStopLoss"] = preset_take_stop
+            body["presetStopLossPrice"] = str(stop_loss_price)
 
         data = await self._request(
             "POST", "/api/v2/mix/order/place-order",
@@ -521,6 +540,8 @@ class BitgetExchange(Exchange):
             "symbol": symbol,
             "productType": "usdt-futures",
             "marginMode": normalized,
+            # P0-1: marginCoin 是 Bitget V2 set-margin-mode 的必填参数
+            "marginCoin": "USDT",
         }
         await self._request(
             "POST", "/api/v2/mix/account/set-margin-mode",

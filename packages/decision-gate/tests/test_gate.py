@@ -1,7 +1,8 @@
 from decimal import Decimal
+
+from decision_gate.gate import decide
 from shared.enums import DecisionGateStatus, RiskStatus
 from shared.schemas import RiskCheckResult
-from decision_gate.gate import decide
 
 
 def _risk(status: RiskStatus) -> RiskCheckResult:

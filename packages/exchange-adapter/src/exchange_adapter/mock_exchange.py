@@ -1,5 +1,6 @@
+import math
 import random
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Optional
 
@@ -9,11 +10,11 @@ from .types import (
     Kline,
     KlineInterval,
     Order,
+    Orderbook,
+    OrderbookLevel,
     OrderSide,
     OrderStatus,
     OrderType,
-    Orderbook,
-    OrderbookLevel,
     Position,
     PositionSide,
     Ticker,
@@ -51,7 +52,7 @@ class MockExchange(Exchange):
             low_24h=low,
             volume_24h=volume,
             change_percent_24h=change * Decimal("100"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     async def get_klines(
@@ -59,8 +60,8 @@ class MockExchange(Exchange):
         symbol: str,
         interval: KlineInterval,
         limit: int = 100,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
     ) -> list[Kline]:
         interval_seconds = {
             KlineInterval.ONE_MINUTE: 60,
@@ -77,20 +78,28 @@ class MockExchange(Exchange):
         secs = interval_seconds.get(interval, 3600)
 
         if end_time is None:
-            end_time = datetime.now(timezone.utc)
+            end_time = datetime.now(UTC)
         if start_time is None:
             start_time = end_time - timedelta(seconds=secs * limit)
 
         klines: list[Kline] = []
         current_price = self._base_price * Decimal("0.9")
         t = start_time
+        idx = 0
         while t <= end_time and len(klines) < limit:
-            volatility = Decimal("0.005")
-            change = Decimal(str(self._rng.uniform(-0.01, 0.01)))
+            volatility = Decimal("0.02")
+            # 添加趋势周期（正弦波）使数据产生明显的 swing highs/lows
+            # 周期 ~20 根 K 线，幅度 3%，volatility 2% 确保 swing 检测有效
+            cycle = Decimal(str(math.sin(idx * 0.3))) * Decimal("0.03")
+            noise = Decimal(str(self._rng.uniform(-0.005, 0.005)))
+            change = cycle + noise
             open_price = current_price
             close_price = open_price * (Decimal("1") + change)
-            high = max(open_price, close_price) * (Decimal("1") + volatility)
-            low = min(open_price, close_price) * (Decimal("1") - volatility)
+            # 添加随机 wick 避免相邻 K 线 high 完全相等
+            wick_up = Decimal(str(self._rng.uniform(0.001, 0.03)))
+            wick_down = Decimal(str(self._rng.uniform(0.001, 0.03)))
+            high = max(open_price, close_price) * (Decimal("1") + wick_up)
+            low = min(open_price, close_price) * (Decimal("1") - wick_down)
             volume = Decimal(str(self._rng.uniform(10, 100)))
 
             klines.append(Kline(
@@ -104,6 +113,7 @@ class MockExchange(Exchange):
             ))
             current_price = close_price
             t += timedelta(seconds=secs)
+            idx += 1
 
         return klines
 
@@ -125,7 +135,7 @@ class MockExchange(Exchange):
             symbol=symbol,
             bids=bids,
             asks=asks,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
 
     async def get_balances(self) -> list[Balance]:
@@ -140,7 +150,7 @@ class MockExchange(Exchange):
             ),
         ]
 
-    async def get_positions(self, symbol: Optional[str] = None) -> list[Position]:
+    async def get_positions(self, symbol: str | None = None) -> list[Position]:
         pos = Position(
             symbol=symbol or "BTCUSDT",
             side=PositionSide.LONG,
@@ -153,14 +163,14 @@ class MockExchange(Exchange):
             margin_type="isolated",
             liquidation_price=Decimal("56000"),
             margin=Decimal("124"),
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(UTC),
         )
         return [pos]
 
     async def get_orders(
         self,
         symbol: str,
-        status: Optional[OrderStatus] = None,
+        status: OrderStatus | None = None,
         limit: int = 50,
     ) -> list[Order]:
         orders = list(self._orders.values())
@@ -173,21 +183,30 @@ class MockExchange(Exchange):
             raise ValueError(f"Order {order_id} not found")
         return self._orders[order_id]
 
+    async def get_order_by_client_id(self, symbol: str, client_order_id: str) -> Order | None:
+        """P0-4: Mock 按 clientOid 查询订单。"""
+        for order in self._orders.values():
+            if order.client_order_id == client_order_id and order.symbol == symbol:
+                return order
+        return None
+
     async def place_order(
         self,
         symbol: str,
         side: OrderSide,
         order_type: OrderType,
         quantity: Decimal,
-        price: Optional[Decimal] = None,
-        stop_price: Optional[Decimal] = None,
-        take_profit_price: Optional[Decimal] = None,
-        stop_loss_price: Optional[Decimal] = None,
-        client_order_id: Optional[str] = None,
+        price: Decimal | None = None,
+        stop_price: Decimal | None = None,
+        take_profit_price: Decimal | None = None,
+        stop_loss_price: Decimal | None = None,
+        client_order_id: str | None = None,
+        margin_mode: str | None = None,
+        margin_coin: str | None = None,
     ) -> Order:
         self._order_counter += 1
         order_id = f"mock-{self._order_counter}"
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         order = Order(
             id=order_id,
             symbol=symbol,
@@ -213,7 +232,7 @@ class MockExchange(Exchange):
             raise ValueError(f"Order {order_id} not found")
         order = self._orders[order_id]
         order.status = OrderStatus.CANCELED
-        order.updated_at = datetime.now(timezone.utc)
+        order.updated_at = datetime.now(UTC)
         return order
 
     async def cancel_all_orders(self, symbol: str) -> list[Order]:
@@ -221,7 +240,7 @@ class MockExchange(Exchange):
         for order in self._orders.values():
             if order.symbol == symbol and order.status in (OrderStatus.NEW, OrderStatus.PARTIALLY_FILLED):
                 order.status = OrderStatus.CANCELED
-                order.updated_at = datetime.now(timezone.utc)
+                order.updated_at = datetime.now(UTC)
                 canceled.append(order)
         return canceled
 

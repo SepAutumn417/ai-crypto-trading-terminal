@@ -17,7 +17,6 @@ from market_structure import MarketState, StructureSnapshot, TrendDirection
 
 from .types import CandidateDirection, CandidatePlan, SetupType
 
-
 # 评级阈值
 MIN_RR_FOR_A = Decimal("2.0")   # A 级最低盈亏比
 MIN_RR_FOR_B = Decimal("1.5")   # B 级最低盈亏比

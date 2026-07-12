@@ -1,7 +1,7 @@
 """自动候选计划引擎核心类型定义。"""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -81,8 +81,8 @@ class CandidatePlan(BaseModel):
     # 配置版本
     strategy_config_version: str | None = None
     # 时间戳
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def to_db_dict(self) -> dict[str, Any]:
         """转换为数据库行 dict。"""

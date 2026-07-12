@@ -11,12 +11,12 @@
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
-from exchange_adapter import Kline
 
+from exchange_adapter import Kline
 from market_structure import (
     BosEvent,
     ChochEvent,
@@ -35,7 +35,6 @@ from market_structure.snapshot import (
 from market_structure.structure import detect_bos_choch
 from market_structure.swing import detect_swings
 
-
 # ---------- 测试数据工厂 ----------
 
 
@@ -43,7 +42,7 @@ def _make_kline(
     ts: datetime,
     o: str,
     h: str,
-    l: str,
+    low: str,
     c: str,
     v: str = "100",
 ) -> Kline:
@@ -51,7 +50,7 @@ def _make_kline(
         timestamp=ts,
         open=Decimal(o),
         high=Decimal(h),
-        low=Decimal(l),
+        low=Decimal(low),
         close=Decimal(c),
         volume=Decimal(v),
     )
@@ -68,7 +67,7 @@ def _make_uptrend_klines(n: int = 30, start_price: Decimal = Decimal("100")) -> 
     klines: list[Kline] = []
     base = start_price
     for i in range(n):
-        ts = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(hours=i)
+        ts = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=i)
         phase = i % 5
         # (price, high, low) per phase
         prices = [
@@ -96,7 +95,7 @@ def _make_downtrend_klines(n: int = 30, start_price: Decimal = Decimal("200")) -
     klines: list[Kline] = []
     base = start_price
     for i in range(n):
-        ts = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(hours=i)
+        ts = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=i)
         phase = i % 5
         prices = [
             (base - 1, base + 1, base - 2),       # phase 0: 反弹
@@ -116,7 +115,7 @@ def _make_range_klines(n: int = 30, center: Decimal = Decimal("150")) -> list[Kl
     """生成震荡 K 线：价格在固定区间内来回。"""
     klines: list[Kline] = []
     for i in range(n):
-        ts = datetime(2026, 1, 1, tzinfo=timezone.utc) + timedelta(hours=i)
+        ts = datetime(2026, 1, 1, tzinfo=UTC) + timedelta(hours=i)
         phase = i % 10
         # 正弦波动
         import math

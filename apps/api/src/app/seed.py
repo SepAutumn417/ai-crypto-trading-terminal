@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from decimal import Decimal
 from uuid import uuid4
 
@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AccountRiskState, ConfigVersionModel, UserSettings
 from shared.enums import ConfigType
-
 
 SEED_RISK_V1 = {
     "max_risk_percent": Decimal("3"),
@@ -46,6 +45,9 @@ SEED_SYMBOL_RULES_V1 = {
         "min_notional": Decimal("5"),
         "max_leverage": Decimal("100"),
         "fee_rate": Decimal("0.0005"),
+        # P1-2: 滑点和资金费率纳入最大损失约束
+        "slippage_rate": Decimal("0.0005"),  # 0.05%
+        "funding_rate": Decimal("0.0001"),  # 0.01%（8h）
     },
     "ETHUSDT": {
         "size_step": Decimal("0.01"),
@@ -54,6 +56,8 @@ SEED_SYMBOL_RULES_V1 = {
         "min_notional": Decimal("5"),
         "max_leverage": Decimal("75"),
         "fee_rate": Decimal("0.0005"),
+        "slippage_rate": Decimal("0.0005"),
+        "funding_rate": Decimal("0.0001"),
     },
     "SOLUSDT": {
         "size_step": Decimal("0.1"),
@@ -62,6 +66,8 @@ SEED_SYMBOL_RULES_V1 = {
         "min_notional": Decimal("5"),
         "max_leverage": Decimal("50"),
         "fee_rate": Decimal("0.0005"),
+        "slippage_rate": Decimal("0.0005"),
+        "funding_rate": Decimal("0.0001"),
     },
 }
 
@@ -117,7 +123,7 @@ async def seed_all(db: AsyncSession) -> None:
                 version_label=label,
                 payload=_decimal_to_str(payload),
                 is_active=True,
-                activated_at=datetime.now(timezone.utc),
+                activated_at=datetime.now(UTC),
             ))
 
     await db.commit()

@@ -1,11 +1,16 @@
 from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 from shared.enums import (
-    DecisionGateStatus, Direction, MarginMode,
-    OpportunityGrade, PlanStatus, RiskStatus,
+    DecisionGateStatus,
+    Direction,
+    MarginMode,
+    OpportunityGrade,
+    PlanStatus,
+    RiskStatus,
 )
 
 
@@ -75,6 +80,9 @@ class PositionSizingResult(BaseModel):
     estimated_fee: Decimal
     risk_reward_ratio: Decimal
     estimated_loss_at_stop: Decimal
+    # P1-2: 滑点和资金费率纳入最大损失约束
+    estimated_slippage: Decimal = Decimal("0")
+    estimated_funding: Decimal = Decimal("0")
     sizing_warnings: list[str] = Field(default_factory=list)
 
 

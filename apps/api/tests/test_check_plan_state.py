@@ -50,7 +50,7 @@ def _make_plan_kwargs(plan_id: UUID | None = None, **overrides) -> dict:
 async def test_check_plan_rejects_submitted_status(client, db_session):
     """SUBMITTED 状态被 check → 409 PLAN_NOT_RECHECKABLE。"""
     plan_id = uuid4()
-    plan = TradePlan(id=plan_id, **_make_plan_kwargs(
+    plan = TradePlan(**_make_plan_kwargs(
         plan_id=plan_id,
         status=PlanStatus.SUBMITTED.value,
     ))
@@ -61,7 +61,7 @@ async def test_check_plan_rejects_submitted_status(client, db_session):
 
     assert resp.status_code == 409, resp.text
     body = resp.json()
-    assert body.get("code") == "PLAN_NOT_RECHECKABLE"
+    assert body["error"]["code"] == "PLAN_NOT_RECHECKABLE"
 
     # plan 状态不变
     fresh = await db_session.get(TradePlan, plan_id)
@@ -72,7 +72,7 @@ async def test_check_plan_rejects_submitted_status(client, db_session):
 async def test_check_plan_rejects_filled_status(client, db_session):
     """FILLED 状态被 check → 409。"""
     plan_id = uuid4()
-    plan = TradePlan(id=plan_id, **_make_plan_kwargs(
+    plan = TradePlan(**_make_plan_kwargs(
         plan_id=plan_id,
         status=PlanStatus.FILLED.value,
     ))
@@ -83,14 +83,14 @@ async def test_check_plan_rejects_filled_status(client, db_session):
 
     assert resp.status_code == 409, resp.text
     body = resp.json()
-    assert body.get("code") == "PLAN_NOT_RECHECKABLE"
+    assert body["error"]["code"] == "PLAN_NOT_RECHECKABLE"
 
 
 @pytest.mark.asyncio
 async def test_check_plan_sets_is_latest(client, db_session):
     """二次 check 后新记录 is_latest=true，旧记录 is_latest=false。"""
     plan_id = uuid4()
-    plan = TradePlan(id=plan_id, **_make_plan_kwargs(plan_id=plan_id))
+    plan = TradePlan(**_make_plan_kwargs(plan_id=plan_id))
     db_session.add(plan)
     await db_session.commit()
 

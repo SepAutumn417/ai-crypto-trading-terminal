@@ -1,8 +1,10 @@
 from decimal import Decimal
 from uuid import uuid4
+
 import pytest
+
+from config_versioning.service import ConfigNotFoundError, ConfigStore
 from shared.enums import ConfigType
-from config_versioning.service import ConfigStore, ConfigNotFoundError
 
 
 @pytest.fixture
@@ -41,9 +43,9 @@ def test_get_active_none_raises(store):
 
 
 def test_list_versions(store):
-    v1 = store.create_version(ConfigType.RISK, "risk-v1", {})
-    v2 = store.create_version(ConfigType.RISK, "risk-v2", {})
-    v3 = store.create_version(ConfigType.EXECUTION, "exec-v1", {})
+    store.create_version(ConfigType.RISK, "risk-v1", {})
+    store.create_version(ConfigType.RISK, "risk-v2", {})
+    store.create_version(ConfigType.EXECUTION, "exec-v1", {})
     versions = store.list_versions(ConfigType.RISK)
     assert len(versions) == 2
 

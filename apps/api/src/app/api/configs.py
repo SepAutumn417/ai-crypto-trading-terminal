@@ -1,20 +1,22 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.exceptions import AppException
 from app.models import ConfigVersionModel
 from app.response import ApiResponse
 from app.schemas.config import (
-    ActiveConfigsOut, ConfigVersionOut, CreateConfigRequest,
+    ActiveConfigsOut,
+    ConfigVersionOut,
+    CreateConfigRequest,
 )
+from app.security import require_auth
 from shared.enums import ConfigType
-
 
 router = APIRouter(prefix="/api/configs", tags=["configs"])
 
@@ -71,7 +73,7 @@ async def list_configs(
 
 @router.post("")
 async def create_config(
-    body: CreateConfigRequest, db: AsyncSession = Depends(get_db),
+    body: CreateConfigRequest, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth),
 ) -> dict:
     _ensure_config_type(body.config_type)
 
@@ -112,7 +114,7 @@ async def create_config(
 
 @router.post("/{version_id}/activate")
 async def activate_config(
-    version_id: UUID, db: AsyncSession = Depends(get_db),
+    version_id: UUID, db: AsyncSession = Depends(get_db), _auth: str = Depends(require_auth),
 ) -> dict:
     # 单事务内：先锁住目标行（行锁），再锁住同 config_type 的全部行，
     # 防止并发激活同类型不同版本导致竞态。
@@ -147,7 +149,7 @@ async def activate_config(
 
     if not target.is_active:
         target.is_active = True
-        target.activated_at = datetime.now(timezone.utc)
+        target.activated_at = datetime.now(UTC)
 
     try:
         await db.commit()
