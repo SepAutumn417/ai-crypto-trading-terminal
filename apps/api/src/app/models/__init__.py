@@ -4,7 +4,9 @@ from app.models.base import Base
 from app.models.candidate_plan import CandidatePlanModel
 from app.models.config_version import ConfigVersionModel
 from app.models.decision_gate_result import DecisionGateResult
+from app.models.execution_log import ExecutionLog
 from app.models.market_structure_snapshot import MarketStructureSnapshotModel
+from app.models.order_intent import OrderIntent
 from app.models.position_sizing_result import PositionSizingResult
 from app.models.risk_check import RiskCheck
 from app.models.system_event import SystemEvent
@@ -17,4 +19,5 @@ __all__ = [
     "DecisionGateResult", "AIEvaluationResultModel", "ConfigVersionModel",
     "SystemEvent", "UserSettings", "AccountRiskState", "TradeJournal",
     "MarketStructureSnapshotModel", "CandidatePlanModel",
+    "OrderIntent", "ExecutionLog",
 ]

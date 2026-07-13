@@ -1,6 +1,6 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type CheckResult, type ConfirmationChallenge } from '@/lib/api';
+import { api, type CheckResult, type ConfirmationChallenge, type OrderIntent } from '@/lib/api';
 import { SizingCard } from './SizingCard';
 import { RiskCard } from './RiskCard';
 import { DecisionCard } from './DecisionCard';
@@ -14,6 +14,7 @@ export function PlanDetail({ planId }: { planId: string }) {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmation, setConfirmation] = useState<ConfirmationChallenge | null>(null);
+  const [intent, setIntent] = useState<OrderIntent | null>(null);
   const { data: plan, isLoading } = useQuery({
     queryKey: ['plan', planId],
     queryFn: () => api.getPlan(planId),
@@ -47,6 +48,14 @@ export function PlanDetail({ planId }: { planId: string }) {
     mutationFn: ({ token, passphrase }: { token: string; passphrase?: string }) =>
       api.confirmPlan(planId, token, passphrase),
     onSuccess: () => executeMut.mutate(),
+  });
+  const previewMut = useMutation({
+    mutationFn: () => api.previewOrder(planId),
+    onSuccess: setIntent,
+  });
+  const dryRunMut = useMutation({
+    mutationFn: (intentId: string) => api.dryRunOrder(intentId),
+    onSuccess: setIntent,
   });
 
   const syncMut = useMutation({
@@ -145,6 +154,12 @@ export function PlanDetail({ planId }: { planId: string }) {
           </div>
         )}
         <div className="mt-4 flex gap-3 flex-wrap">
+          {result?.decision.result === 'ALLOW_CONFIRM' && (
+            <button onClick={() => previewMut.mutate()} disabled={previewMut.isPending}
+              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-700 px-4 py-2 rounded">
+              {previewMut.isPending ? '生成中...' : '订单预览'}
+            </button>
+          )}
           {(plan.status === 'DRAFT' || plan.status === 'CHECKED' || plan.status === 'READY_FOR_CONFIRMATION') && (
             <button onClick={() => checkMut.mutate()} disabled={checkMut.isPending}
               className="bg-green-600 hover:bg-green-700 disabled:bg-gray-700 px-4 py-2 rounded">
@@ -192,6 +207,20 @@ export function PlanDetail({ planId }: { planId: string }) {
           <RiskCard risk={result.risk} />
           <DecisionCard decision={result.decision} />
         </div>
+      )}
+      {intent && (
+        <section className="rounded border border-indigo-800 bg-indigo-950/20 p-4 space-y-3">
+          <h3 className="font-semibold">订单预览 / Dry Run</h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <span>数量：{intent.quantity}</span><span>价格：{intent.entry_price}</span>
+            <span>止损：{intent.stop_loss_price ?? '-'}</span><span>状态：{intent.status}</span>
+          </div>
+          <button onClick={() => dryRunMut.mutate(intent.id)} disabled={dryRunMut.isPending || intent.status === 'DRY_RUN_PASSED'}
+            className="rounded bg-indigo-600 px-4 py-2 disabled:bg-gray-700">
+            {dryRunMut.isPending ? '校验中...' : intent.status === 'DRY_RUN_PASSED' ? 'Dry Run 已通过' : '运行 Dry Run'}
+          </button>
+          {intent.logs.map((log) => <p key={`${log.event_type}-${log.created_at}`} className="text-xs text-gray-400">{log.event_type}: {log.message}</p>)}
+        </section>
       )}
 
       <OrderConfirmModal

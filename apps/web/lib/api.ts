@@ -292,6 +292,25 @@ export interface ConfirmationChallenge {
   expires_at: string;
 }
 
+export interface OrderIntent {
+  id: string;
+  trade_plan_id: string;
+  client_order_id: string;
+  symbol: string;
+  direction: Direction;
+  order_type: string;
+  margin_mode: string;
+  entry_price: string;
+  stop_loss_price: string | null;
+  take_profit_prices: string[];
+  quantity: string;
+  leverage: string;
+  status: string;
+  request_payload: Record<string, unknown>;
+  created_at: string;
+  logs: Array<{ event_type: string; status: string; message: string; created_at: string }>;
+}
+
 export interface Ticker {
   symbol: string;
   last_price: string;
@@ -512,6 +531,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ token, ...(passphrase ? { passphrase } : {}) }),
     }),
+  previewOrder: (planId: string) =>
+    request<OrderIntent>(`/api/execution/plans/${planId}/preview`, { method: 'POST' }),
+  dryRunOrder: (intentId: string) =>
+    request<OrderIntent>(`/api/execution/intents/${intentId}/dry-run`, { method: 'POST' }),
   executePlan: (id: string) =>
     request<TradePlan>(`/api/trade-plans/${id}/execute`, { method: 'POST' }),
   syncOrderStatus: (id: string) =>

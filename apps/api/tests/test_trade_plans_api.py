@@ -57,6 +57,16 @@ async def test_check_plan_allows(client):
     assert body["confirmation"]["token"]
     assert body["confirmation"]["expires_at"]
 
+    preview = await client.post(f"/api/execution/plans/{plan_id}/preview")
+    assert preview.status_code == 200
+    intent = preview.json()["data"]
+    assert intent["status"] == "PREVIEWED"
+    assert intent["request_payload"]["dry_run"] is True
+
+    dry_run = await client.post(f"/api/execution/intents/{intent['id']}/dry-run")
+    assert dry_run.status_code == 200
+    assert dry_run.json()["data"]["status"] == "DRY_RUN_PASSED"
+
     confirm = await client.post(
         f"/api/trade-plans/{plan_id}/confirm",
         json={"token": body["confirmation"]["token"]},
