@@ -1,3 +1,5 @@
+import { getWsToken } from './api';
+
 /**
  * WebSocket 客户端：自动重连 + 心跳 + 订阅管理 + 事件分发。
  *
@@ -207,7 +209,9 @@ function getWsUrl(): string {
       wsBase = `${proto}//${window.location.host}`;
     }
   }
-  return `${wsBase}/api/ws`;
+  const token = getWsToken();
+  const url = `${wsBase}/api/ws`;
+  return token ? `${url}?token=${encodeURIComponent(token)}` : url;
 }
 
 export function getWsClient(): WsClient {

@@ -30,8 +30,9 @@ async def test_check_plan_allows(client):
     await client.post("/api/system/execution-mode", json={"enabled": True})
 
     # Mock AI 评估返回 A 级，避免 MockExchange 正弦波数据导致 D 级降级为 WAIT
-    from unittest.mock import patch, MagicMock
     from decimal import Decimal
+    from unittest.mock import AsyncMock, MagicMock, patch
+
     from ai_evaluator.types import EvaluationGrade
     fake_ai = MagicMock()
     fake_ai.grade = EvaluationGrade.A
@@ -43,14 +44,25 @@ async def test_check_plan_allows(client):
     fake_ai.signals = []
     fake_ai.summary = "mock"
     fake_ai.conviction = Decimal("80")
+    fake_ai.source.value = "rule_based"
+    fake_ai.explanation = None
 
-    with patch("ai_evaluator.evaluate_trade", return_value=fake_ai):
+    with patch("ai_evaluator.evaluate_with_llm", new=AsyncMock(return_value=fake_ai)):
         resp = await client.post(f"/api/trade-plans/{plan_id}/check")
 
     body = resp.json()["data"]
     assert body["decision"]["result"] == "ALLOW_CONFIRM"
     assert body["plan"]["status"] == "READY_FOR_CONFIRMATION"
     assert body["sizing"]["risk_amount"] == "15"
+    assert body["confirmation"]["token"]
+    assert body["confirmation"]["expires_at"]
+
+    confirm = await client.post(
+        f"/api/trade-plans/{plan_id}/confirm",
+        json={"token": body["confirmation"]["token"]},
+    )
+    assert confirm.status_code == 200
+    assert confirm.json()["data"]["status"] == "CONFIRMED"
 
 
 @pytest.mark.asyncio

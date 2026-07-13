@@ -5,7 +5,7 @@ import type { CheckResult, TradePlan } from '@/lib/api';
 interface OrderConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (passphrase?: string) => void;
   result: CheckResult | null;
   plan?: TradePlan | null;
   isSubmitting?: boolean;
@@ -22,6 +22,7 @@ export function OrderConfirmModal({
   const [expired, setExpired] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [showConfirmInput, setShowConfirmInput] = useState(false);
+  const [passphrase, setPassphrase] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
   const confirmInputRef = useRef<HTMLInputElement>(null);
 
@@ -39,6 +40,7 @@ export function OrderConfirmModal({
     setCountdown(COUNTDOWN_SECONDS);
     setExpired(false);
     setConfirmText('');
+    setPassphrase('');
     setShowConfirmInput(false);
 
     const timer = setInterval(() => {
@@ -98,8 +100,8 @@ export function OrderConfirmModal({
       return;
     }
     if (isHighRisk && confirmText !== 'CONFIRM') return;
-    onConfirm();
-  }, [isHighRisk, showConfirmInput, confirmText, onConfirm]);
+    onConfirm(passphrase || undefined);
+  }, [isHighRisk, showConfirmInput, confirmText, passphrase, onConfirm]);
 
   if (!isOpen || !result) return null;
 
@@ -217,6 +219,21 @@ export function OrderConfirmModal({
               )}
             </div>
           )}
+
+          <div>
+            <label htmlFor="confirmation-passphrase" className="block text-sm text-gray-400 mb-1">
+              二次确认口令（如服务端已配置）
+            </label>
+            <input
+              id="confirmation-passphrase"
+              type="password"
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
+              autoComplete="one-time-code"
+              className="block w-full bg-gray-800 border border-gray-700 px-3 py-2 rounded text-white"
+              placeholder="未配置时可留空"
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>

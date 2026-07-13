@@ -20,6 +20,43 @@ export type { AIExplanation, ComprehensiveAIEvaluation };
 
 const BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const DEFAULT_TIMEOUT_MS = 15_000;
+const API_TOKEN_STORAGE_KEY = 'crypto-terminal.api-token';
+const WS_TOKEN_STORAGE_KEY = 'crypto-terminal.ws-token';
+
+/** Stores an operator-supplied token for the current browser session only. */
+export function getApiToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(API_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setApiToken(token: string): void {
+  if (typeof window !== 'undefined') window.sessionStorage.setItem(API_TOKEN_STORAGE_KEY, token.trim());
+}
+
+export function clearApiToken(): void {
+  if (typeof window !== 'undefined') window.sessionStorage.removeItem(API_TOKEN_STORAGE_KEY);
+}
+
+export function getWsToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.sessionStorage.getItem(WS_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setWsToken(token: string): void {
+  if (typeof window !== 'undefined') window.sessionStorage.setItem(WS_TOKEN_STORAGE_KEY, token.trim());
+}
+
+export function clearWsToken(): void {
+  if (typeof window !== 'undefined') window.sessionStorage.removeItem(WS_TOKEN_STORAGE_KEY);
+}
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -46,9 +83,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
   let res: Response;
   try {
+    const token = getApiToken();
     res = await fetch(`${BASE}${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers || {}),
+      },
       signal: controller.signal,
     });
   } catch (e) {
@@ -242,6 +284,12 @@ export interface CheckResult {
   sizing: PositionSizingResult;
   risk: RiskCheckResult;
   decision: DecisionGateResult;
+  confirmation?: ConfirmationChallenge;
+}
+
+export interface ConfirmationChallenge {
+  token: string;
+  expires_at: string;
 }
 
 export interface Ticker {
@@ -459,6 +507,11 @@ export const api = {
     request<TradePlan>('/api/trade-plans', { method: 'POST', body: JSON.stringify(input) }),
   checkPlan: (id: string) =>
     request<CheckResult>(`/api/trade-plans/${id}/check`, { method: 'POST' }),
+  confirmPlan: (id: string, token: string, passphrase?: string) =>
+    request<{ plan_id: string; status: string }>(`/api/trade-plans/${id}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ token, ...(passphrase ? { passphrase } : {}) }),
+    }),
   executePlan: (id: string) =>
     request<TradePlan>(`/api/trade-plans/${id}/execute`, { method: 'POST' }),
   syncOrderStatus: (id: string) =>

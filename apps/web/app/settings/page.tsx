@@ -6,6 +6,7 @@ import { RiskConfigEditor } from '@/components/settings/RiskConfigEditor';
 import { ExecutionConfigEditor } from '@/components/settings/ExecutionConfigEditor';
 import { OpportunityGradeEditor } from '@/components/settings/OpportunityGradeEditor';
 import { SymbolRulesEditor } from '@/components/settings/SymbolRulesEditor';
+import { ApiAccessSettings } from '@/components/settings/ApiAccessSettings';
 
 export default function SettingsPage() {
   const { data: activeConfigs, isError, error } = useQuery({
@@ -19,6 +20,7 @@ export default function SettingsPage() {
       {isError && (
         <p className="text-red-400 text-sm">加载配置失败：{(error as Error).message}</p>
       )}
+      <ApiAccessSettings />
       <EquityEditor />
       <RiskConfigEditor activeConfig={activeConfigs?.risk} />
       <ExecutionConfigEditor activeConfig={activeConfigs?.execution} />

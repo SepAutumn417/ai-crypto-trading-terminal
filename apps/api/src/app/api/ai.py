@@ -3,15 +3,16 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ai_evaluator import AIEvaluationResult, evaluate_trade, evaluate_with_llm, AIInput, LLMClient
-from app.db import get_db
+from ai_evaluator import AIEvaluationResult, AIInput, LLMClient, evaluate_trade, evaluate_with_llm
 from app.config import settings
+from app.db import get_db
 from app.exceptions import AppException
-from app.models import TradePlan, AIEvaluationResultModel
+from app.models import AIEvaluationResultModel, TradePlan
 from app.response import ApiResponse
+from app.security import require_auth
 from app.services.config_service import get_ai_indicator_weights
 from app.services.execution_service import _get_exchange
 from exchange_adapter import KlineInterval
@@ -42,6 +43,7 @@ async def evaluate_opportunity(
     interval: KlineInterval = Query(default=KlineInterval.ONE_HOUR, description="K线周期"),
     limit: int = Query(default=100, ge=50, le=500, description="K线数量"),
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> ApiResponse[AIEvaluationResult]:
     try:
         exchange = _get_exchange()
@@ -69,6 +71,7 @@ async def evaluate_opportunity(
 async def evaluate_plan(
     plan_id: UUID,
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> dict:
     """v0.5: 对交易计划进行 AI 综合评估（规则评分 + LLM 解释）。"""
     plan = await db.get(TradePlan, plan_id)
@@ -140,6 +143,7 @@ async def evaluate_plan(
 async def review_trade(
     journal_id: UUID,
     db: AsyncSession = Depends(get_db),
+    _auth: str = Depends(require_auth),
 ) -> dict:
     """v0.5: 对已平仓交易进行 AI 复盘。"""
     from app.models import TradeJournal

@@ -7,9 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
+from app.models import TradePlan as TradePlanModel
 from app.response import ApiResponse
 from app.schemas.trade_plan import (
     CheckResult,
+    ConfirmationChallengeOut,
     TradePlanCreate,
     TradePlanOut,
 )
@@ -81,6 +83,19 @@ async def check_plan(plan_id: UUID, db: AsyncSession = Depends(get_db), _auth: s
         "risk": result["risk"],
         "decision": result["decision"],
     }
+    # Return the one-time token only from this authenticated endpoint. It is not
+    # included in normal trade-plan read responses.
+    model = await db.get(TradePlanModel, plan_id)
+    if (
+        result["plan"].status.value == "READY_FOR_CONFIRMATION"
+        and model is not None
+        and model.confirmation_token
+        and model.confirmation_expires_at
+    ):
+        payload["confirmation"] = ConfirmationChallengeOut(
+            token=model.confirmation_token,
+            expires_at=model.confirmation_expires_at,
+        ).model_dump(mode="json")
     return ApiResponse.ok(payload).model_dump()
 
 

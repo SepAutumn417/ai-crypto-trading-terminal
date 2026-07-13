@@ -112,6 +112,13 @@ class CheckResult(BaseModel):
     decision: DecisionGateOut
 
 
+class ConfirmationChallengeOut(BaseModel):
+    """One-time confirmation material returned only by the authenticated check endpoint."""
+
+    token: str
+    expires_at: datetime
+
+
 class CalculatePositionRequest(BaseModel):
     equity: Decimal
     risk_percent: Decimal

@@ -1,6 +1,6 @@
 'use client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, type CheckResult } from '@/lib/api';
+import { api, type CheckResult, type ConfirmationChallenge } from '@/lib/api';
 import { SizingCard } from './SizingCard';
 import { RiskCard } from './RiskCard';
 import { DecisionCard } from './DecisionCard';
@@ -13,6 +13,7 @@ export function PlanDetail({ planId }: { planId: string }) {
   const qc = useQueryClient();
   const [result, setResult] = useState<CheckResult | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmation, setConfirmation] = useState<ConfirmationChallenge | null>(null);
   const { data: plan, isLoading } = useQuery({
     queryKey: ['plan', planId],
     queryFn: () => api.getPlan(planId),
@@ -28,6 +29,7 @@ export function PlanDetail({ planId }: { planId: string }) {
     mutationFn: () => api.checkPlan(planId),
     onSuccess: (r) => {
       setResult(r);
+      setConfirmation(r.confirmation ?? null);
       qc.invalidateQueries({ queryKey: ['plan', planId] });
       qc.invalidateQueries({ queryKey: ['plans'] });
     },
@@ -40,6 +42,11 @@ export function PlanDetail({ planId }: { planId: string }) {
       qc.invalidateQueries({ queryKey: ['plan', planId] });
       qc.invalidateQueries({ queryKey: ['plans'] });
     },
+  });
+  const confirmMut = useMutation({
+    mutationFn: ({ token, passphrase }: { token: string; passphrase?: string }) =>
+      api.confirmPlan(planId, token, passphrase),
+    onSuccess: () => executeMut.mutate(),
   });
 
   const syncMut = useMutation({
@@ -61,7 +68,9 @@ export function PlanDetail({ planId }: { planId: string }) {
   if (isLoading || !plan) return <p className="text-gray-500">加载中...</p>;
 
   // P1-23: canExecute 必须同时满足状态在允许集合内 AND decision=ALLOW_CONFIRM，避免 SUBMITTED 误显示
-  const canExecute = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status) && result?.decision.result === 'ALLOW_CONFIRM';
+  const canExecute = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status)
+    && result?.decision.result === 'ALLOW_CONFIRM'
+    && !!confirmation;
   // P1-24: result 为 null 但状态允许时，点击按钮自动触发检查
   const needsCheck = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status) && !result;
   const canSync = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
@@ -76,8 +85,9 @@ export function PlanDetail({ planId }: { planId: string }) {
     }
   };
 
-  const handleConfirm = () => {
-    executeMut.mutate();
+  const handleConfirm = (passphrase?: string) => {
+    if (!confirmation) return;
+    confirmMut.mutate({ token: confirmation.token, passphrase });
   };
 
   const statusColors: Record<string, string> = {
@@ -190,7 +200,7 @@ export function PlanDetail({ planId }: { planId: string }) {
         onConfirm={handleConfirm}
         result={result}
         plan={plan}
-        isSubmitting={executeMut.isPending}
+        isSubmitting={confirmMut.isPending || executeMut.isPending}
         errorMessage={executeMut.isError ? (executeMut.error as Error)?.message || '执行失败' : null}
       />
     </div>
