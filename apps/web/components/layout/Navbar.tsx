@@ -12,6 +12,7 @@ export function Navbar() {
     { href: '/ai', label: '指标评分' },
     { href: '/plans', label: '交易计划' },
     { href: '/journal', label: '交易日志' },
+    { href: '/review', label: '复盘' },
     { href: '/risk', label: '风控中心' },
     { href: '/settings', label: '设置' },
   ];
