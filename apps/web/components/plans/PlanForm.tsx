@@ -4,109 +4,24 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { PlanCreate } from '@/lib/api';
 
-const schema = z.object({
-  symbol: z.string().min(1),
-  direction: z.enum(['LONG', 'SHORT']),
-  entry_price: z.string(),
-  stop_loss_price: z.string().optional(),
-  take_profit_prices: z.string(),
-  leverage: z.string(),
-  risk_percent: z.string(),
-  opportunity_grade: z.enum(['A', 'B', 'C', 'BLOCKED']),
-  equity: z.string(),
-  margin_mode: z.enum(['isolated', 'crossed']),
-  setup_type: z.string().optional(),
-  notes: z.string().optional(),
-});
+const schema = z.object({ symbol:z.string().min(1), direction:z.enum(['LONG','SHORT']), entry_price:z.string(), stop_loss_price:z.string().optional(), take_profit_prices:z.string(), leverage:z.string(), risk_percent:z.string(), opportunity_grade:z.enum(['A','B','C','BLOCKED']), equity:z.string(), margin_mode:z.enum(['isolated','crossed']), setup_type:z.string().optional(), notes:z.string().optional() });
+const inputClass = 'mt-1.5 block h-11 w-full rounded-lg border border-slate-700/80 bg-slate-950/40 px-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/15';
+const labelClass = 'text-[12px] font-medium text-slate-300';
 
-export function PlanForm({ onSubmit, submitting }: { onSubmit: (v: PlanCreate) => void; submitting: boolean }) {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      symbol: 'BTCUSDT', direction: 'LONG', entry_price: '62400', stop_loss_price: '61900',
-      take_profit_prices: '63800,64500', leverage: '10', risk_percent: '1',
-      opportunity_grade: 'A', equity: '1500',
-      margin_mode: 'isolated', setup_type: '', notes: '',
-    },
-  });
-
-  return (
-    <form onSubmit={handleSubmit((data) => onSubmit({
-      symbol: data.symbol,
-      direction: data.direction as 'LONG' | 'SHORT',
-      entry_price: data.entry_price,
-      stop_loss_price: data.stop_loss_price,
-      take_profit_prices: data.take_profit_prices.split(',').map((s) => s.trim()).filter(Boolean),
-      leverage: data.leverage,
-      risk_percent: data.risk_percent,
-      opportunity_grade: data.opportunity_grade as 'A' | 'B' | 'C' | 'BLOCKED',
-      equity: data.equity,
-      margin_mode: data.margin_mode,
-      setup_type: data.setup_type || undefined,
-      notes: data.notes || undefined,
-    }))}
-      className="space-y-2 p-4 border border-gray-800 rounded">
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-sm">交易对
-          <input {...register('symbol')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.symbol && <p className="text-red-500 text-xs mt-0.5">{errors.symbol.message}</p>}
-        </label>
-        <label className="text-sm">方向
-          <select {...register('direction')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
-            <option value="LONG">做多</option>
-            <option value="SHORT">做空</option>
-          </select>
-          {errors.direction && <p className="text-red-500 text-xs mt-0.5">{errors.direction.message}</p>}
-        </label>
-        <label className="text-sm">入场价
-          <input {...register('entry_price')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.entry_price && <p className="text-red-500 text-xs mt-0.5">{errors.entry_price.message}</p>}
-        </label>
-        <label className="text-sm">止损价
-          <input {...register('stop_loss_price')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.stop_loss_price && <p className="text-red-500 text-xs mt-0.5">{errors.stop_loss_price.message}</p>}
-        </label>
-        <label className="text-sm col-span-2">止盈价（逗号分隔）
-          <input {...register('take_profit_prices')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.take_profit_prices && <p className="text-red-500 text-xs mt-0.5">{errors.take_profit_prices.message}</p>}
-        </label>
-        <label className="text-sm">杠杆
-          <input {...register('leverage')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.leverage && <p className="text-red-500 text-xs mt-0.5">{errors.leverage.message}</p>}
-        </label>
-        <label className="text-sm">风险%
-          <input {...register('risk_percent')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.risk_percent && <p className="text-red-500 text-xs mt-0.5">{errors.risk_percent.message}</p>}
-        </label>
-        <label className="text-sm">等级
-          <select {...register('opportunity_grade')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
-            <option value="A">A</option><option value="B">B</option>
-            <option value="C">C</option><option value="BLOCKED">BLOCKED</option>
-          </select>
-          {errors.opportunity_grade && <p className="text-red-500 text-xs mt-0.5">{errors.opportunity_grade.message}</p>}
-        </label>
-        <label className="text-sm">保证金模式
-          <select {...register('margin_mode')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded">
-            <option value="isolated">逐仓</option>
-            <option value="crossed">全仓</option>
-          </select>
-          {errors.margin_mode && <p className="text-red-500 text-xs mt-0.5">{errors.margin_mode.message}</p>}
-        </label>
-        <label className="text-sm">账户权益
-          <input {...register('equity')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-          {errors.equity && <p className="text-red-500 text-xs mt-0.5">{errors.equity.message}</p>}
-        </label>
-        <label className="text-sm">形态类型
-          <input {...register('setup_type')} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded" />
-        </label>
-        <label className="text-sm col-span-2">备注
-          <textarea {...register('notes')} rows={2} className="block w-full bg-gray-900 border border-gray-700 px-2 py-1 rounded resize-none" />
-        </label>
-      </div>
-      <button type="submit" disabled={submitting}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 px-3 py-2 rounded">
-        {submitting ? '创建中...' : '创建计划'}
-      </button>
-    </form>
-  );
+export function PlanForm({ onSubmit, submitting }: { onSubmit:(value:PlanCreate)=>void; submitting:boolean }) {
+  const { register, handleSubmit, formState:{ errors } } = useForm({ resolver:zodResolver(schema), defaultValues:{ symbol:'BTCUSDT', direction:'LONG', entry_price:'62400', stop_loss_price:'61900', take_profit_prices:'63800,64500', leverage:'10', risk_percent:'1', opportunity_grade:'A', equity:'1500', margin_mode:'isolated', setup_type:'', notes:'' } });
+  return <form onSubmit={handleSubmit((data)=>onSubmit({ symbol:data.symbol, direction:data.direction as 'LONG'|'SHORT', entry_price:data.entry_price, stop_loss_price:data.stop_loss_price, take_profit_prices:data.take_profit_prices.split(',').map((item)=>item.trim()).filter(Boolean), leverage:data.leverage, risk_percent:data.risk_percent, opportunity_grade:data.opportunity_grade as 'A'|'B'|'C'|'BLOCKED', equity:data.equity, margin_mode:data.margin_mode, setup_type:data.setup_type||undefined, notes:data.notes||undefined }))} className="space-y-7">
+    <FormSection number="01" title="市场与方向" description="确定本次计划的交易标的与方向。">
+      <div className="grid grid-cols-2 gap-4"><Field label="交易对" error={errors.symbol?.message}><input {...register('symbol')} className={inputClass} /></Field><Field label="方向" error={errors.direction?.message}><select {...register('direction')} className={inputClass}><option value="LONG">做多</option><option value="SHORT">做空</option></select></Field></div>
+    </FormSection>
+    <FormSection number="02" title="入场与退出" description="止损和止盈用于计算计划的风险边界。">
+      <div className="grid grid-cols-2 gap-4"><Field label="入场价" error={errors.entry_price?.message}><input {...register('entry_price')} className={inputClass} inputMode="decimal" /></Field><Field label="止损价" error={errors.stop_loss_price?.message}><input {...register('stop_loss_price')} className={inputClass} inputMode="decimal" /></Field><Field label="止盈价" hint="用逗号分隔多个目标" error={errors.take_profit_prices?.message} span><input {...register('take_profit_prices')} className={inputClass} inputMode="decimal" /></Field></div>
+    </FormSection>
+    <FormSection number="03" title="仓位与风险" description="以下参数会随计划一起进入风险校验。">
+      <div className="grid grid-cols-2 gap-4"><Field label="杠杆"><input {...register('leverage')} className={inputClass} inputMode="numeric" /></Field><Field label="单笔风险 %"><input {...register('risk_percent')} className={inputClass} inputMode="decimal" /></Field><Field label="机会等级"><select {...register('opportunity_grade')} className={inputClass}><option value="A">A · 高质量</option><option value="B">B · 可观察</option><option value="C">C · 低优先级</option><option value="BLOCKED">BLOCKED · 阻断</option></select></Field><Field label="保证金模式"><select {...register('margin_mode')} className={inputClass}><option value="isolated">逐仓</option><option value="crossed">全仓</option></select></Field><Field label="账户权益" hint="USDT"><input {...register('equity')} className={inputClass} inputMode="decimal" /></Field><Field label="形态类型"><input {...register('setup_type')} className={inputClass} placeholder="例如：突破回踩" /></Field><Field label="计划备注" span><textarea {...register('notes')} rows={3} className={`${inputClass} h-auto py-3 resize-none`} placeholder="记录入场理由、失效条件或观察点" /></Field></div>
+    </FormSection>
+    <button type="submit" disabled={submitting} className="flex h-12 w-full items-center justify-center rounded-lg bg-blue-500 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,.22)] transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50">{submitting ? '正在创建计划…' : '创建并进入风险校验'}</button>
+  </form>;
 }
+function FormSection({number,title,description,children}:{number:string;title:string;description:string;children:React.ReactNode}) { return <section className="border-b border-slate-800 pb-7 last:border-0 last:pb-0"><div className="mb-4 flex items-start gap-3"><span className="mt-0.5 text-[11px] font-bold tracking-[.12em] text-blue-400">{number}</span><div><h3 className="text-sm font-semibold text-slate-100">{title}</h3><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></div></div>{children}</section>; }
+function Field({label,hint,error,span,children}:{label:string;hint?:string;error?:string;span?:boolean;children:React.ReactNode}) { return <label className={`${labelClass} ${span?'col-span-2':''}`}>{label}{hint&&<span className="ml-1.5 font-normal text-slate-600">{hint}</span>}{children}{error&&<span className="mt-1 block text-xs text-rose-400">{error}</span>}</label>; }
