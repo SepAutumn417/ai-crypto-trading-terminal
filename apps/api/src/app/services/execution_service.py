@@ -167,7 +167,7 @@ async def _get_latest_sizing(db: AsyncSession, plan_id: UUID) -> PositionSizingR
 
 async def _auto_create_journal_on_fill(db: AsyncSession, model: TradePlanModel) -> None:
     """订单变为 FILLED 时自动创建 trade_journal。"""
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
     existing = await db.execute(
         select(TradeJournalModel).where(TradeJournalModel.trade_plan_id == model.id).limit(1)
@@ -189,7 +189,7 @@ async def _auto_create_journal_on_fill(db: AsyncSession, model: TradePlanModel) 
         setup_type=model.setup_type,
         entry_reason=model.notes,
         status="OPEN",
-        entry_at=datetime.now(timezone.utc),
+        entry_at=datetime.now(UTC),
     )
     db.add(journal)
     logger.info("auto_created_journal plan_id=%s symbol=%s qty=%s", model.id, model.symbol, filled_qty)

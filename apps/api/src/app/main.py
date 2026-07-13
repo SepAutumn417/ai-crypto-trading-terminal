@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     await ws_manager.shutdown()
 
 
-app = FastAPI(title="AI Personal Trading Terminal L4", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="AI Personal Trading Terminal L4", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

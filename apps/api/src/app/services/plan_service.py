@@ -145,9 +145,9 @@ async def check_plan(db: AsyncSession, plan_id: UUID) -> dict:
     ai_model: AIEvaluationResultModel | None = None
     ai_comprehensive = None
     try:
-        from ai_evaluator import evaluate_with_llm, AIInput, LLMClient
-        from app.services.execution_service import _get_exchange
+        from ai_evaluator import AIInput, LLMClient, evaluate_with_llm
         from app.config import settings
+        from app.services.execution_service import _get_exchange
         from exchange_adapter import KlineInterval
 
         exchange = _get_exchange()

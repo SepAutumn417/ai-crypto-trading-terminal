@@ -1,7 +1,7 @@
 [project]
 name = "crypto-terminal"
-version = "0.1.0"
-description = "AI Personal Trading Terminal L4 - v0.1"
+version = "1.0.0"
+description = "AI Personal Trading Terminal L4"
 requires-python = ">=3.12"
 
 [tool.uv.workspace]

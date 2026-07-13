@@ -120,10 +120,10 @@ pnpm build
 | v0.3 | 市场结构识别（Swing High/Low、BOS/CHOCH、支撑压力区、无交易区） | ✅ 已交付 |
 | v0.4 | 自动候选计划生成（Opportunity Radar、7 种 Setup、6 维评级、9 状态机） | ✅ 已交付 |
 | v0.5 | 技术指标评分与解释（结构解释、计划质量分析、风险解释） | ✅ 已交付 |
-| v0.6 | 订单预览与 Dry Run（Order Intent、Order Preview、执行日志） | 🚧 进行中 |
-| v0.7 | 只读实盘同步（读取账户权益/持仓/订单/成交、持仓监控） | ⏳ |
-| v0.8 | 小额 L4 确认执行（启用交易 Key、用户确认后提交限价单、Kill Switch） | ⏳ |
-| v1.0 | 完整 L4 个人交易终端（Dashboard、Opportunity Radar、Chart Workspace、Journal、Review） | ⏳ |
+| v0.6 | 订单预览与 Dry Run（Order Intent、Order Preview、执行日志） | ✅ 已交付 |
+| v0.7 | 只读实盘同步（读取账户权益/持仓/订单/成交、持仓监控） | ✅ 已交付 |
+| v0.8 | 小额 L4 确认执行（启用交易 Key、用户确认后提交限价单、Kill Switch） | ✅ 已交付 |
+| v1.0 | 完整 L4 个人交易终端（Dashboard、Opportunity Radar、Chart Workspace、Journal、Review） | 🚧 发布验证中 |
 
 ## 关键约定
 

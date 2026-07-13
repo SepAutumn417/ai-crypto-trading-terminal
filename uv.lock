@@ -219,7 +219,7 @@ wheels = [
 
 [[package]]
 name = "api"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "ai-evaluator" },
@@ -440,7 +440,7 @@ dev = [{ name = "pytest", specifier = ">=8.0.0" }]
 
 [[package]]
 name = "crypto-terminal"
-version = "0.1.0"
+version = "1.0.0"
 source = { virtual = "." }
 
 [[package]]
