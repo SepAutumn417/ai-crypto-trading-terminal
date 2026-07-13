@@ -1,13 +1,19 @@
 """v0.1 验收测试 - 对齐设计稿 §7"""
-import pytest
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
+
+import pytest
 from sqlalchemy import select
 
 from app.models import (
     AccountRiskState as AccountRiskStateModel,
-    DecisionGateResult, PositionSizingResult, RiskCheck, SystemEvent,
+)
+from app.models import (
+    DecisionGateResult,
+    PositionSizingResult,
+    RiskCheck,
+    SystemEvent,
 )
 
 
@@ -24,7 +30,9 @@ def _mock_ai_grade_a():
     fake.signals = []
     fake.summary = "mock"
     fake.conviction = Decimal("80")
-    return patch("ai_evaluator.evaluate_trade", return_value=fake)
+    fake.source.value = "rule_based"
+    fake.explanation = None
+    return patch("ai_evaluator.evaluate_with_llm", new=AsyncMock(return_value=fake))
 
 
 # ===== §7.1 创建交易计划 + 输入入场/止损/止盈 + 计算风险/止损距离/名义仓位/保证金/盈亏比 =====

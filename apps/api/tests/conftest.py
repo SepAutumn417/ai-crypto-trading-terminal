@@ -1,5 +1,5 @@
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
@@ -9,6 +9,7 @@ os.environ["DATABASE_URL"] = os.environ.get(
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -16,10 +17,9 @@ from app.config import settings
 from app.db import Base, get_db
 from app.main import app
 from app.models import *  # noqa
-from app.seed import seed_all
 from app.security import require_auth
+from app.seed import seed_all
 from app.services import execution_service
-
 
 settings.database_url = os.environ["DATABASE_URL"]
 # P0-2: 测试环境配置 API token，使高风险端点可通过认证
@@ -57,24 +57,33 @@ async def _reset_exchange_singleton():
     yield
     execution_service.reset_exchange_for_tests()
 
-@pytest_asyncio.fixture
-async def db_setup():
-    """创建表 + seed 数据，测试后清理。被 client 和 db_session 共享。"""
+@pytest_asyncio.fixture(scope="session")
+async def db_schema():
+    """Create the test schema once; individual tests only reset table contents."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    async with TestSession() as session:
-        await seed_all(session)
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def db_setup(db_schema):
+    """Reset all rows and seed defaults without paying DDL cost for every test."""
+    table_names = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
+    async with engine.begin() as conn:
+        await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
+    async with TestSession() as session:
+        await seed_all(session)
+    yield
 
 
 @pytest_asyncio.fixture
 async def client(db_setup):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
-    await engine.dispose()
 
 
 @pytest_asyncio.fixture
