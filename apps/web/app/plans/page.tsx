@@ -10,34 +10,8 @@ import { useWebSocketInvalidation } from '@/lib/useWebSocket';
 export default function PlansPage() {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const qc = useQueryClient();
-  const { data: plans = [], isLoading, isError, error } = useQuery({
-    queryKey: ['plans'],
-    queryFn: () => api.listPlans(),
-  });
-  const createMut = useMutation({
-    mutationFn: (input: PlanCreate) => api.createPlan(input),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['plans'] }),
-  });
-
-  // 订阅 plans 频道：计划状态变更时实时刷新列表和详情
+  const { data: plans = [], isLoading, isError, error } = useQuery({ queryKey: ['plans'], queryFn: () => api.listPlans() });
+  const createMut = useMutation({ mutationFn: (input: PlanCreate) => api.createPlan(input), onSuccess: () => qc.invalidateQueries({ queryKey: ['plans'] }) });
   useWebSocketInvalidation('plans', ['plans', 'plan']);
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-1 space-y-4">
-        <h2 className="text-xl font-bold">新建计划</h2>
-        <PlanForm onSubmit={(v) => createMut.mutate(v)} submitting={createMut.isPending} />
-        <h2 className="text-xl font-bold mt-6">计划列表</h2>
-        {isError && (
-          <p className="text-red-400 text-sm">加载计划失败：{(error as Error).message}</p>
-        )}
-        <PlanList plans={plans} loading={isLoading} onSelect={setSelectedPlanId} selectedId={selectedPlanId} />
-      </div>
-      <div className="lg:col-span-2">
-        {selectedPlanId ? <PlanDetail planId={selectedPlanId} /> : (
-          <p className="text-gray-500">从左侧选择计划以查看详情，或新建一个。</p>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="page-stack"><header className="page-header"><div><p className="eyebrow">执行前检查</p><h1 className="page-title">交易计划</h1><p className="page-subtitle">把入场、止损、仓位与风险参数放在同一条可复核的决策链中。</p></div></header><div className="workflow-grid"><div className="surface workflow-panel space-y-5"><h2 className="surface-title">新建计划</h2><PlanForm onSubmit={(value) => createMut.mutate(value)} submitting={createMut.isPending} /><div className="pt-4 border-t border-slate-700"><h2 className="surface-title">计划列表</h2></div>{isError && <p className="text-red-300 text-sm">加载计划失败：{(error as Error).message}</p>}<PlanList plans={plans} loading={isLoading} onSelect={setSelectedPlanId} selectedId={selectedPlanId} /></div><div className="surface">{selectedPlanId ? <PlanDetail planId={selectedPlanId} /> : <div className="workflow-empty"><div><strong>从左侧选择一个计划</strong>查看完整决策、仓位规模与风险校验，或先创建新的交易计划。</div></div>}</div></div></div>;
 }

@@ -1,5 +1,4 @@
 'use client';
-
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
@@ -7,36 +6,6 @@ export default function DashboardPage() {
   const { data: status } = useQuery({ queryKey: ['system-status'], queryFn: api.getSystemStatus, refetchInterval: 15_000 });
   const account = useQuery({ queryKey: ['account-snapshot'], queryFn: () => api.getAccountSnapshot(), refetchInterval: 30_000 });
   const snapshot = account.data;
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">交易仪表盘</h2>
-          <p className="text-sm text-gray-400">只读账户同步不会提交或修改任何交易所订单。</p>
-        </div>
-        <button className="rounded bg-blue-600 px-4 py-2 disabled:bg-gray-700" onClick={() => account.refetch()} disabled={account.isFetching}>
-          {account.isFetching ? '同步中...' : '刷新账户'}
-        </button>
-      </div>
-      {account.isError && <p className="rounded border border-red-800 bg-red-950/30 p-3 text-sm text-red-300">账户同步失败：{(account.error as Error).message}</p>}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Stat label="执行模式" value={status?.execution_enabled ? '已开启' : '已关闭'} tone={status?.execution_enabled ? 'text-green-400' : 'text-gray-400'} />
-        <Stat label="Kill Switch" value={status?.kill_switch ? '已激活' : '未激活'} tone={status?.kill_switch ? 'text-red-400' : 'text-green-400'} />
-        <Stat label="账户权益" value={snapshot?.balances[0]?.equity ?? '-'} tone="text-white" />
-      </div>
-      <section className="rounded border border-gray-800 bg-gray-900 p-4">
-        <h3 className="mb-3 font-semibold">持仓</h3>
-        {snapshot?.positions.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-gray-400"><tr><th>标的</th><th>方向</th><th>数量</th><th>开仓价</th><th>未实现盈亏</th><th>杠杆</th></tr></thead><tbody>{snapshot.positions.map((position) => <tr key={`${position.symbol}-${position.side}`} className="border-t border-gray-800"><td>{position.symbol}</td><td>{position.side}</td><td>{position.quantity}</td><td>{position.entry_price}</td><td>{position.unrealized_pnl ?? '-'}</td><td>{position.leverage}x</td></tr>)}</tbody></table></div> : <p className="text-sm text-gray-500">暂无持仓</p>}
-      </section>
-      <section className="rounded border border-gray-800 bg-gray-900 p-4">
-        <h3 className="mb-3 font-semibold">最近订单（{snapshot?.symbol ?? 'BTCUSDT'}）</h3>
-        {snapshot?.orders.length ? <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-gray-400"><tr><th>订单 ID</th><th>方向</th><th>类型</th><th>价格</th><th>数量</th><th>状态</th></tr></thead><tbody>{snapshot.orders.map((order) => <tr key={order.id} className="border-t border-gray-800"><td>{order.id}</td><td>{order.side}</td><td>{order.type}</td><td>{order.price ?? '市价'}</td><td>{order.quantity}</td><td>{order.status}</td></tr>)}</tbody></table></div> : <p className="text-sm text-gray-500">暂无订单</p>}
-      </section>
-    </div>
-  );
+  return <div className="page-stack"><header className="page-header"><div><p className="eyebrow">账户概览 · 实时监控</p><h1 className="page-title">交易仪表盘</h1><p className="page-subtitle">只读同步不会创建、提交或修改任何交易所订单。最后状态由系统自动刷新。</p></div><button className="primary-button" onClick={() => account.refetch()} disabled={account.isFetching}>{account.isFetching ? '正在同步…' : '刷新账户'}</button></header>{account.isError && <div className="notice" role="alert"><span className="notice-indicator" /><div><strong>账户暂未同步</strong><p>无法读取账户快照：{(account.error as Error).message}。请检查 API 服务与账户配置后重试。</p></div></div>}<section className="metric-grid" aria-label="系统状态"><Metric label="执行模式" value={status?.execution_enabled ? '已开启' : '已关闭'} meta="订单执行受风控规则保护" tone={status?.execution_enabled ? 'tone-success' : 'tone-neutral'} /><Metric label="Kill Switch" value={status?.kill_switch ? '已激活' : '未激活'} meta={status?.kill_switch ? '已阻断新的交易操作' : '未触发交易保护'} tone={status?.kill_switch ? 'tone-danger' : 'tone-success'} /><Metric label="账户权益" value={String(snapshot?.balances[0]?.equity ?? '-')} meta={snapshot ? `${snapshot.symbol ?? 'BTCUSDT'} 账户快照` : '等待账户同步'} tone="tone-neutral" /></section><section className="content-grid"><div className="surface"><div className="surface-head"><h2 className="surface-title">账户与持仓</h2><span className="surface-note">实时账户快照</span></div>{snapshot?.positions.length ? <div className="data-surface"><table className="data-table"><thead><tr><th>标的</th><th>方向</th><th>数量</th><th>开仓价</th><th>未实现盈亏</th><th>杠杆</th></tr></thead><tbody>{snapshot.positions.map((position) => <tr key={`${position.symbol}-${position.side}`}><td>{position.symbol}</td><td>{position.side}</td><td>{position.quantity}</td><td>{position.entry_price}</td><td>{position.unrealized_pnl ?? '-'}</td><td>{position.leverage}x</td></tr>)}</tbody></table></div> : <div className="empty-state">当前没有持仓<br />同步成功后，持仓会显示在这里。</div>}</div><aside className="surface"><div className="surface-head"><h2 className="surface-title">风险护栏</h2><span className="surface-note">系统级</span></div><div className="surface-body"><div className="risk-row"><span>执行开关</span><strong className={status?.execution_enabled ? 'tone-success' : 'tone-neutral'}>{status?.execution_enabled ? '允许执行' : '仅观察'}</strong></div><div className="risk-row"><span>紧急保护</span><strong className={status?.kill_switch ? 'tone-danger' : 'tone-success'}>{status?.kill_switch ? '已启用' : '正常'}</strong></div><div className="risk-row"><span>账户数据</span><strong>{snapshot ? '已获取' : '等待同步'}</strong></div><p className="risk-hint">需要开始交易前，请先确认执行模式、Kill Switch 和账户快照均处于预期状态。</p></div></aside></section><section className="surface data-surface"><div className="surface-head"><h2 className="surface-title">最近订单</h2><span className="surface-note">{snapshot?.symbol ?? 'BTCUSDT'}</span></div>{snapshot?.orders.length ? <table className="data-table"><thead><tr><th>订单 ID</th><th>方向</th><th>类型</th><th>价格</th><th>数量</th><th>状态</th></tr></thead><tbody>{snapshot.orders.map((order) => <tr key={order.id}><td>{order.id}</td><td>{order.side}</td><td>{order.type}</td><td>{order.price ?? '市价'}</td><td>{order.quantity}</td><td>{order.status}</td></tr>)}</tbody></table> : <div className="empty-state">暂无最近订单</div>}</section></div>;
 }
-
-function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return <div className="rounded border border-gray-800 bg-gray-900 p-4"><p className="text-sm text-gray-400">{label}</p><p className={`mt-1 text-xl font-semibold ${tone}`}>{value}</p></div>;
-}
+function Metric({ label, value, meta, tone }: { label: string; value: string; meta: string; tone: string }) { return <div className="metric"><div className="metric-label">{label}</div><div className={`metric-value ${tone}`}>{value}</div><div className="metric-meta">{meta}</div></div>; }

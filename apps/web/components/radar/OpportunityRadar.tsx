@@ -101,8 +101,11 @@ export function OpportunityRadar() {
   return (
     <div className="space-y-6">
       {/* 扫描控制 */}
-      <div className="bg-gray-900 rounded-lg p-4">
-        <h2 className="text-lg font-semibold mb-3">Opportunity Radar</h2>
+      <div className="surface radar-toolbar">
+        <div>
+          <p className="eyebrow">市场扫描</p>
+          <h2 className="surface-title text-lg">Opportunity Radar</h2>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex gap-2">
             {SYMBOLS.map((s) => (
@@ -133,7 +136,7 @@ export function OpportunityRadar() {
           <button
             onClick={handleScan}
             disabled={scanning}
-            className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="primary-button disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {scanning ? '扫描中...' : '扫描机会'}
           </button>
@@ -179,7 +182,7 @@ export function OpportunityRadar() {
           <p className="text-red-400 text-sm">候选列表加载失败：{(listError as Error).message}</p>
         )}
         {candidates.length === 0 && !listLoading && (
-          <div className="bg-gray-900 rounded-lg p-8 text-center text-gray-500">
+          <div className="surface empty-state">
             暂无候选计划，点击「扫描机会」生成
           </div>
         )}
