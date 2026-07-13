@@ -62,10 +62,28 @@ async def test_check_plan_allows(client):
     intent = preview.json()["data"]
     assert intent["status"] == "PREVIEWED"
     assert intent["request_payload"]["dry_run"] is True
+    assert [log["event_type"] for log in intent["logs"]] == ["ORDER_PREVIEW_CREATED"]
 
     dry_run = await client.post(f"/api/execution/intents/{intent['id']}/dry-run")
     assert dry_run.status_code == 200
     assert dry_run.json()["data"]["status"] == "DRY_RUN_PASSED"
+    assert [log["event_type"] for log in dry_run.json()["data"]["logs"]] == [
+        "ORDER_PREVIEW_CREATED", "DRY_RUN_PASSED",
+    ]
+
+    # Repeating a dry run returns the recorded result and does not add another log.
+    repeated_dry_run = await client.post(f"/api/execution/intents/{intent['id']}/dry-run")
+    assert repeated_dry_run.status_code == 200
+    assert len(repeated_dry_run.json()["data"]["logs"]) == 2
+
+    history = await client.get(f"/api/execution/plans/{plan_id}/intents")
+    assert history.status_code == 200
+    assert len(history.json()["data"]) == 1
+    assert history.json()["data"][0]["id"] == intent["id"]
+
+    detail = await client.get(f"/api/execution/intents/{intent['id']}")
+    assert detail.status_code == 200
+    assert detail.json()["data"]["status"] == "DRY_RUN_PASSED"
 
     confirm = await client.post(
         f"/api/trade-plans/{plan_id}/confirm",

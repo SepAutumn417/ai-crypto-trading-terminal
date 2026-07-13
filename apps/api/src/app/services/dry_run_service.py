@@ -26,6 +26,32 @@ def _intent_out(intent: OrderIntent, logs: list[ExecutionLog] | None = None) -> 
     }
 
 
+async def _intent_logs(db: AsyncSession, intent_id: UUID) -> list[ExecutionLog]:
+    return (await db.execute(
+        select(ExecutionLog)
+        .where(ExecutionLog.order_intent_id == intent_id)
+        .order_by(ExecutionLog.created_at)
+    )).scalars().all()
+
+
+async def get_intent(db: AsyncSession, intent_id: UUID) -> dict:
+    intent = await db.get(OrderIntent, intent_id)
+    if intent is None:
+        raise LookupError(f"Order intent {intent_id} not found")
+    return _intent_out(intent, await _intent_logs(db, intent.id))
+
+
+async def list_plan_intents(db: AsyncSession, plan_id: UUID) -> list[dict]:
+    if await db.get(TradePlan, plan_id) is None:
+        raise LookupError(f"Plan {plan_id} not found")
+    intents = (await db.execute(
+        select(OrderIntent)
+        .where(OrderIntent.trade_plan_id == plan_id)
+        .order_by(OrderIntent.created_at.desc())
+    )).scalars().all()
+    return [_intent_out(intent, await _intent_logs(db, intent.id)) for intent in intents]
+
+
 async def create_preview(db: AsyncSession, plan_id: UUID) -> dict:
     plan = await db.get(TradePlan, plan_id)
     if plan is None:
@@ -61,7 +87,7 @@ async def create_preview(db: AsyncSession, plan_id: UUID) -> dict:
     db.add(ExecutionLog(order_intent_id=intent.id, event_type="ORDER_PREVIEW_CREATED", status="PREVIEWED", message="Order preview created; no exchange request was sent.", payload=payload))
     await db.commit()
     await db.refresh(intent)
-    return _intent_out(intent)
+    return _intent_out(intent, await _intent_logs(db, intent.id))
 
 
 async def run_dry_run(db: AsyncSession, intent_id: UUID) -> dict:
@@ -69,8 +95,7 @@ async def run_dry_run(db: AsyncSession, intent_id: UUID) -> dict:
     if intent is None:
         raise LookupError(f"Order intent {intent_id} not found")
     if intent.status == "DRY_RUN_PASSED":
-        logs = (await db.execute(select(ExecutionLog).where(ExecutionLog.order_intent_id == intent_id).order_by(ExecutionLog.created_at))).scalars().all()
-        return _intent_out(intent, logs)
+        return _intent_out(intent, await _intent_logs(db, intent.id))
     if intent.status != "PREVIEWED":
         raise ValueError(f"Order intent in state {intent.status} cannot be dry-run")
     payload = intent.request_payload
@@ -84,5 +109,4 @@ async def run_dry_run(db: AsyncSession, intent_id: UUID) -> dict:
         db.add(ExecutionLog(order_intent_id=intent.id, event_type="DRY_RUN_PASSED", status=intent.status, message="Payload serialization and safety checks passed. No exchange request was sent.", payload=payload))
     await db.commit()
     await db.refresh(intent)
-    logs = (await db.execute(select(ExecutionLog).where(ExecutionLog.order_intent_id == intent_id).order_by(ExecutionLog.created_at))).scalars().all()
-    return _intent_out(intent, logs)
+    return _intent_out(intent, await _intent_logs(db, intent.id))

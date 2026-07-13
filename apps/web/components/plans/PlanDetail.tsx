@@ -26,6 +26,10 @@ export function PlanDetail({ planId }: { planId: string }) {
       return false;
     },
   });
+  const { data: savedIntents = [] } = useQuery({
+    queryKey: ['order-intents', planId],
+    queryFn: () => api.listOrderIntents(planId),
+  });
   const checkMut = useMutation({
     mutationFn: () => api.checkPlan(planId),
     onSuccess: (r) => {
@@ -51,11 +55,17 @@ export function PlanDetail({ planId }: { planId: string }) {
   });
   const previewMut = useMutation({
     mutationFn: () => api.previewOrder(planId),
-    onSuccess: setIntent,
+    onSuccess: (nextIntent) => {
+      setIntent(nextIntent);
+      qc.invalidateQueries({ queryKey: ['order-intents', planId] });
+    },
   });
   const dryRunMut = useMutation({
     mutationFn: (intentId: string) => api.dryRunOrder(intentId),
-    onSuccess: setIntent,
+    onSuccess: (nextIntent) => {
+      setIntent(nextIntent);
+      qc.invalidateQueries({ queryKey: ['order-intents', planId] });
+    },
   });
 
   const syncMut = useMutation({
@@ -84,6 +94,9 @@ export function PlanDetail({ planId }: { planId: string }) {
   const needsCheck = ['READY_FOR_CONFIRMATION', 'FAILED'].includes(plan.status) && !result;
   const canSync = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
   const canCancel = !!plan.exchange_order_id && ACTIVE_STATUSES.includes(plan.status);
+  const intents = intent
+    ? [intent, ...savedIntents.filter((savedIntent) => savedIntent.id !== intent.id)]
+    : savedIntents;
 
   const handleExecute = () => {
     // P1-24: result 存在且 decision 允许时打开确认弹窗；result 为 null 时自动触发检查
@@ -208,18 +221,25 @@ export function PlanDetail({ planId }: { planId: string }) {
           <DecisionCard decision={result.decision} />
         </div>
       )}
-      {intent && (
+      {intents.length > 0 && (
         <section className="rounded border border-indigo-800 bg-indigo-950/20 p-4 space-y-3">
-          <h3 className="font-semibold">订单预览 / Dry Run</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <span>数量：{intent.quantity}</span><span>价格：{intent.entry_price}</span>
-            <span>止损：{intent.stop_loss_price ?? '-'}</span><span>状态：{intent.status}</span>
-          </div>
-          <button onClick={() => dryRunMut.mutate(intent.id)} disabled={dryRunMut.isPending || intent.status === 'DRY_RUN_PASSED'}
-            className="rounded bg-indigo-600 px-4 py-2 disabled:bg-gray-700">
-            {dryRunMut.isPending ? '校验中...' : intent.status === 'DRY_RUN_PASSED' ? 'Dry Run 已通过' : '运行 Dry Run'}
-          </button>
-          {intent.logs.map((log) => <p key={`${log.event_type}-${log.created_at}`} className="text-xs text-gray-400">{log.event_type}: {log.message}</p>)}
+          <h3 className="font-semibold">订单预览 / Dry Run 历史</h3>
+          {intents.map((savedIntent) => (
+            <div key={savedIntent.id} className="border-t border-indigo-900 pt-3 first:border-t-0 first:pt-0">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span>数量：{savedIntent.quantity}</span><span>价格：{savedIntent.entry_price}</span>
+                <span>止损：{savedIntent.stop_loss_price ?? '-'}</span><span>状态：{savedIntent.status}</span>
+              </div>
+              <div className="mt-2 flex items-center gap-3">
+                <button onClick={() => dryRunMut.mutate(savedIntent.id)} disabled={dryRunMut.isPending || savedIntent.status === 'DRY_RUN_PASSED'}
+                  className="rounded bg-indigo-600 px-4 py-2 disabled:bg-gray-700">
+                  {dryRunMut.isPending ? '校验中...' : savedIntent.status === 'DRY_RUN_PASSED' ? 'Dry Run 已通过' : '运行 Dry Run'}
+                </button>
+                <span className="text-xs text-gray-500">{savedIntent.client_order_id}</span>
+              </div>
+              {savedIntent.logs.map((log) => <p key={`${log.event_type}-${log.created_at}`} className="mt-1 text-xs text-gray-400">{log.event_type}: {log.message}</p>)}
+            </div>
+          ))}
         </section>
       )}
 

@@ -533,6 +533,10 @@ export const api = {
     }),
   previewOrder: (planId: string) =>
     request<OrderIntent>(`/api/execution/plans/${planId}/preview`, { method: 'POST' }),
+  listOrderIntents: (planId: string) =>
+    request<OrderIntent[]>(`/api/execution/plans/${planId}/intents`),
+  getOrderIntent: (intentId: string) =>
+    request<OrderIntent>(`/api/execution/intents/${intentId}`),
   dryRunOrder: (intentId: string) =>
     request<OrderIntent>(`/api/execution/intents/${intentId}/dry-run`, { method: 'POST' }),
   executePlan: (id: string) =>
