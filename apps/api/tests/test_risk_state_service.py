@@ -8,12 +8,12 @@
 5. test_new_day_resets_daily_loss — 交易日切换 → daily_loss_r 重置
 6. test_journal_close_via_api_updates_risk_state — 通过 API 平仓 → 风控状态更新
 """
-import pytest
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from decimal import Decimal
-from uuid import uuid4, UUID
 from unittest.mock import patch
+from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.models import (
@@ -94,8 +94,8 @@ async def _create_filled_journal(
         pnl=pnl,
         pnl_percent=Decimal("-1.5"),
         status="CLOSED",
-        entry_at=datetime.now(timezone.utc),
-        exit_at=datetime.now(timezone.utc),
+        entry_at=datetime.now(UTC),
+        exit_at=datetime.now(UTC),
     )
     db_session.add(journal)
     await db_session.commit()
@@ -117,7 +117,7 @@ async def test_loss_updates_risk_state(client, db_session):
     assert state.consecutive_losses == 1
     assert state.daily_loss_r == Decimal("1")  # -15/15 = -1R → |R| = 1
     assert state.cooldown_until is not None
-    assert state.cooldown_until > datetime.now(timezone.utc)
+    assert state.cooldown_until > datetime.now(UTC)
 
 
 @pytest.mark.asyncio

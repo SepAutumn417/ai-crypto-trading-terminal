@@ -7,17 +7,23 @@ TDD 纪律：先写测试看到失败，再写实现。
 2. test_check_plan_sets_is_latest — 二次 check 后新记录 is_latest=true，旧记录 is_latest=false
 3. test_check_plan_rejects_filled_status — FILLED 状态被 check → 409
 """
-import pytest
 from decimal import Decimal
-from uuid import uuid4, UUID
+from uuid import UUID, uuid4
 
+import pytest
 from sqlalchemy import select
 
 from app.exceptions import AppException
 from app.models import (
     DecisionGateResult as DecisionGateResultModel,
+)
+from app.models import (
     PositionSizingResult as PositionSizingResultModel,
+)
+from app.models import (
     RiskCheck as RiskCheckModel,
+)
+from app.models import (
     TradePlan,
 )
 from shared.enums import Direction, MarginMode, OpportunityGrade, PlanStatus

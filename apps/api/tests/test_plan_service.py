@@ -1,6 +1,8 @@
+from uuid import UUID
+
 import pytest
 from sqlalchemy import select
-from uuid import UUID
+
 from app.models import DecisionGateResult, PositionSizingResult, RiskCheck
 
 

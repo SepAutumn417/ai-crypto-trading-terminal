@@ -10,15 +10,16 @@ P0-3: 添加服务端二次确认字段到 trade_plans 表：
 - confirmed_at: 确认时间
 - confirmation_expires_at: 确认过期时间
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
+from typing import Union
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'g0a1b2c3d4e5'
-down_revision: Union[str, None] = 'c9d0e1f2a3b4'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'c9d0e1f2a3b4'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -9,15 +9,16 @@ P1-2: 将滑点和资金费率纳入最大损失约束。
 - estimated_funding: 资金费率成本估算（假设持仓 8h）
 两者均纳入 estimated_loss_at_stop = risk_amount + estimated_fee + estimated_slippage + estimated_funding
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
+from typing import Union
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'h1b2c3d4e5f6'
-down_revision: Union[str, None] = 'g0a1b2c3d4e5'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'g0a1b2c3d4e5'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

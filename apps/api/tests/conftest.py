@@ -11,7 +11,6 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from app.config import settings
 from app.db import Base, get_db
@@ -36,9 +35,10 @@ async def _override_require_auth() -> str:
 
 app.dependency_overrides[require_auth] = _override_require_auth
 
-# P1-3: 使用 NullPool 避免连接复用导致的 "another operation is in progress" 错误
+# A session-scoped pytest event loop lets test-only connections be pooled
+# safely, avoiding a reconnect for every API request.
 engine = create_async_engine(
-    os.environ["DATABASE_URL"], echo=False, future=True, poolclass=NullPool
+    os.environ["DATABASE_URL"], echo=False, future=True, pool_size=5, max_overflow=5
 )
 TestSession = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -71,9 +71,13 @@ async def db_schema():
 
 @pytest_asyncio.fixture
 async def db_setup(db_schema):
-    """Reset all rows and seed defaults without paying DDL cost for every test."""
+    """Reset all rows and seed defaults, restoring schema altered by isolation tests."""
     table_names = ", ".join(table.name for table in reversed(Base.metadata.sorted_tables))
     async with engine.begin() as conn:
+        # A few concurrency tests intentionally use drop_all on a separate
+        # engine pointed at this database. Recreate any dropped tables before
+        # truncating so later tests remain independent.
+        await conn.run_sync(Base.metadata.create_all)
         await conn.execute(text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE"))
     async with TestSession() as session:
         await seed_all(session)

@@ -1,6 +1,7 @@
 """候选计划 API 测试 - v0.4 auto_plans 端点。"""
-import pytest
 from uuid import uuid4
+
+import pytest
 
 
 @pytest.mark.asyncio

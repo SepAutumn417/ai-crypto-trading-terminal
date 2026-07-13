@@ -87,7 +87,6 @@ class MockExchange(Exchange):
         t = start_time
         idx = 0
         while t <= end_time and len(klines) < limit:
-            volatility = Decimal("0.02")
             # 添加趋势周期（正弦波）使数据产生明显的 swing highs/lows
             # 周期 ~20 根 K 线，幅度 3%，volatility 2% 确保 swing 检测有效
             cycle = Decimal(str(math.sin(idx * 0.3))) * Decimal("0.03")

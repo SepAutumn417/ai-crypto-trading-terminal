@@ -23,10 +23,10 @@ from exchange_adapter import Kline, KlineInterval
 from .evaluator import evaluate_trade
 from .llm import LLMClient, LLMError
 from .types import (
+    AIEvaluationResult,
     AIExplanation,
     AIInput,
     AISource,
-    AIEvaluationResult,
     ComprehensiveEvaluation,
     RecommendedAction,
 )

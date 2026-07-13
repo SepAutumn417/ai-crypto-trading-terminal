@@ -123,7 +123,7 @@ pnpm build
 | v0.6 | 订单预览与 Dry Run（Order Intent、Order Preview、执行日志） | ✅ 已交付 |
 | v0.7 | 只读实盘同步（读取账户权益/持仓/订单/成交、持仓监控） | ✅ 已交付 |
 | v0.8 | 小额 L4 确认执行（启用交易 Key、用户确认后提交限价单、Kill Switch） | ✅ 已交付 |
-| v1.0 | 完整 L4 个人交易终端（Dashboard、Opportunity Radar、Chart Workspace、Journal、Review） | 🚧 发布验证中 |
+| v1.0 | 完整 L4 个人交易终端（Dashboard、Opportunity Radar、Chart Workspace、Journal、Review） | ✅ 已交付 |
 
 ## 关键约定
 

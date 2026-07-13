@@ -144,8 +144,9 @@ async def test_p0_5_kill_switch_deactivation_records_audit(client, db_session):
 @pytest.mark.asyncio
 async def test_p0_5_kill_switch_service_activate_directly(db_session):
     """P0-5: 直接调用 kill_switch_service.activate_kill_switch 验证联动。"""
-    from app.services.kill_switch_service import activate_kill_switch, is_kill_switch_active
     from uuid import uuid4
+
+    from app.services.kill_switch_service import activate_kill_switch, is_kill_switch_active
 
     # 先确保 kill_switch=False
     settings_model = await db_session.get(UserSettings, 1)

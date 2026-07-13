@@ -20,6 +20,8 @@ members = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 testpaths = ["packages", "apps/api/tests"]
 # P1-3: 使用 importlib 模式避免多个 tests 目录注册成顶层 tests 包导致的收集错误
 addopts = "--import-mode=importlib"

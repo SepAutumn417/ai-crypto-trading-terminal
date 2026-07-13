@@ -13,15 +13,16 @@ Create Date: 2026-07-09 10:00:00.000000
 
 这些字段在 ORM 模型中已定义，但迁移中缺失，导致 alembic upgrade head 后写入失败。
 """
-from typing import Sequence, Union
-from alembic import op
-import sqlalchemy as sa
+from collections.abc import Sequence
+from typing import Union
 
+import sqlalchemy as sa
+from alembic import op
 
 revision: str = 'e5f6a7b8c9d0'
-down_revision: Union[str, None] = 'd4e5f6a7b8c9'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'd4e5f6a7b8c9'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

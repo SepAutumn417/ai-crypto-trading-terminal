@@ -1,5 +1,6 @@
-import pytest
 from decimal import Decimal
+
+import pytest
 
 
 @pytest.mark.asyncio
@@ -47,7 +48,7 @@ async def test_get_journal_not_found(client):
 async def test_list_journals(client):
     for i in range(3):
         await client.post("/api/journals", json={
-            "symbol": f"BTCUSDT",
+            "symbol": "BTCUSDT",
             "direction": "LONG",
             "entry_price": str(65000 + i * 100),
             "quantity": "0.1",

@@ -16,17 +16,17 @@ v0.5: 扩展 ai_evaluation_results 表，添加 LLM 解释层字段。
 - invalidation_conditions: 失效条件列表 (JSONB)
 - emotional_risk_flags: 情绪风险标记列表 (JSONB)
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
-
 revision: str = 'd0e1f2a3b4c5'
-down_revision: Union[str, None] = 'c9d0e1f2a3b4'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = 'c9d0e1f2a3b4'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

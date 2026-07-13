@@ -1,3 +1,5 @@
+from datetime import UTC
+
 import pytest
 
 
@@ -96,11 +98,12 @@ async def test_partial_unique_index_enforced(db_session):
     """
     import uuid as _uuid
     from datetime import datetime, timezone
-    from sqlalchemy.exc import IntegrityError
 
-    from app.models import ConfigVersionModel as CVM
+    from sqlalchemy.exc import IntegrityError
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
     from app.db import Base
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from app.models import ConfigVersionModel as CVM
 
     # 用独立的 engine + session 避免 conflict with module-level TestSession
     # （module-level session 可能复用连接导致 partial unique 索引无法浮现）
@@ -117,7 +120,7 @@ async def test_partial_unique_index_enforced(db_session):
             a = CVM(
                 id=_uuid.uuid4(), config_type="risk", version_label="risk-unique-test-a",
                 payload={}, is_active=True,
-                created_at=datetime.now(timezone.utc), activated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC), activated_at=datetime.now(UTC),
             )
             s.add(a)
             await s.commit()
@@ -125,7 +128,7 @@ async def test_partial_unique_index_enforced(db_session):
             b = CVM(
                 id=_uuid.uuid4(), config_type="risk", version_label="risk-unique-test-b",
                 payload={}, is_active=True,
-                created_at=datetime.now(timezone.utc), activated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC), activated_at=datetime.now(UTC),
             )
             s.add(b)
             caught = False
@@ -156,10 +159,10 @@ async def test_concurrent_activation_only_one_wins():
 
     from sqlalchemy import select, update
     from sqlalchemy.exc import IntegrityError
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-    from app.models import ConfigVersionModel as CVM
     from app.db import Base
+    from app.models import ConfigVersionModel as CVM
 
     eng = create_async_engine(
         os.environ.get("TEST_DATABASE_URL",
@@ -202,7 +205,7 @@ async def test_concurrent_activation_only_one_wins():
                 )
                 if not target.is_active:
                     target.is_active = True
-                    target.activated_at = datetime.now(timezone.utc)
+                    target.activated_at = datetime.now(UTC)
                 try:
                     await s.commit()
                     return True

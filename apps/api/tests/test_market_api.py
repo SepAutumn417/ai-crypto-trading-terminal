@@ -1,8 +1,9 @@
-import pytest
-from decimal import Decimal
 from datetime import datetime, timezone
+from decimal import Decimal
 
-from exchange_adapter import MockExchange, KlineInterval
+import pytest
+
+from exchange_adapter import KlineInterval, MockExchange
 
 
 @pytest.mark.asyncio

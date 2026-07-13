@@ -1,4 +1,6 @@
+from .agent import SYSTEM_PROMPT, build_user_prompt, evaluate_with_llm
 from .evaluator import DEFAULT_WEIGHTS, evaluate_trade
+from .llm import LLMClient, LLMError
 from .types import (
     AIEvaluationResult,
     AIExplanation,
@@ -10,8 +12,6 @@ from .types import (
     RecommendedAction,
     SignalType,
 )
-from .llm import LLMClient, LLMError
-from .agent import evaluate_with_llm, build_user_prompt, SYSTEM_PROMPT
 
 __all__ = [
     "evaluate_trade",

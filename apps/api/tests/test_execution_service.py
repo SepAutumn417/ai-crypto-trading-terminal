@@ -9,14 +9,15 @@
 6. test_execute_plan_rejects_kill_switch — kill_switch=True → 拒绝
 7. test_execute_plan_executing_state_triggers_reconciliation — EXECUTING → 对账恢复
 """
-import pytest
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
-from datetime import datetime, timedelta, timezone
-from uuid import uuid4, UUID
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
+
+import pytest
 
 from app.exceptions import AppException
-from app.models import TradePlan, PositionSizingResult
+from app.models import PositionSizingResult, TradePlan
 from app.services import execution_service
 from shared.enums import Direction, MarginMode, OpportunityGrade, PlanStatus
 
@@ -52,8 +53,8 @@ def _make_confirmed_plan_kwargs(plan_id: UUID, **overrides) -> dict:
         status=PlanStatus.CONFIRMED.value,
         confirmation_token="test-confirmation-token",
         plan_hash="dummy-hash",  # 会被 _compute_plan_hash 覆盖
-        confirmed_at=datetime.now(timezone.utc),
-        confirmation_expires_at=datetime.now(timezone.utc) + timedelta(seconds=60),
+        confirmed_at=datetime.now(UTC),
+        confirmation_expires_at=datetime.now(UTC) + timedelta(seconds=60),
     )
     base.update(overrides)
     return base
