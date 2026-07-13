@@ -311,6 +311,56 @@ export interface OrderIntent {
   logs: Array<{ event_type: string; status: string; message: string; created_at: string }>;
 }
 
+export interface AccountBalance {
+  asset: string;
+  available: string;
+  total: string;
+  unrealized_pnl: string | null;
+  margin_balance: string | null;
+  equity: string | null;
+}
+
+export interface AccountPosition {
+  symbol: string;
+  side: 'long' | 'short';
+  quantity: string;
+  entry_price: string;
+  mark_price: string | null;
+  unrealized_pnl: string | null;
+  unrealized_pnl_percent: string | null;
+  leverage: string;
+  margin_type: string;
+  liquidation_price: string | null;
+  margin: string | null;
+  updated_at: string | null;
+}
+
+export interface AccountOrder {
+  id: string;
+  symbol: string;
+  side: 'buy' | 'sell';
+  type: string;
+  status: string;
+  price: string | null;
+  quantity: string;
+  filled_quantity: string;
+  average_fill_price: string | null;
+  stop_price: string | null;
+  take_profit_price: string | null;
+  stop_loss_price: string | null;
+  client_order_id: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface AccountSnapshot {
+  symbol: string;
+  synced_at: string;
+  balances: AccountBalance[];
+  positions: AccountPosition[];
+  orders: AccountOrder[];
+}
+
 export interface Ticker {
   symbol: string;
   last_price: string;
@@ -508,6 +558,8 @@ export interface TradeJournalSummary {
 }
 
 export const api = {
+  getAccountSnapshot: (symbol = 'BTCUSDT', orderLimit = 50) =>
+    request<AccountSnapshot>(`/api/account/snapshot?symbol=${encodeURIComponent(symbol)}&order_limit=${orderLimit}`),
   getSystemStatus: () => request<SystemStatus>('/api/system/status'),
   toggleKillSwitch: (enabled: boolean) =>
     request<UserSettings>('/api/system/kill-switch', { method: 'POST', body: JSON.stringify({ enabled }) }),

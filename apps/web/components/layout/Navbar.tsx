@@ -6,6 +6,7 @@ import { SystemStatusBadge } from './SystemStatusBadge';
 export function Navbar() {
   const path = usePathname();
   const links = [
+    { href: '/dashboard', label: '仪表盘' },
     { href: '/market', label: '行情' },
     { href: '/radar', label: '机会雷达' },
     { href: '/ai', label: '指标评分' },

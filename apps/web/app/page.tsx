@@ -4,6 +4,6 @@ import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const router = useRouter();
-  useEffect(() => { router.push('/plans'); }, [router]);
+  useEffect(() => { router.push('/dashboard'); }, [router]);
   return null;
 }
