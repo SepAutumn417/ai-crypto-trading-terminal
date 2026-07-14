@@ -15,7 +15,13 @@ class TradePlan(Base):
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True, default=uuid4)
     candidate_plan_id: Mapped[UUID] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("candidate_plans.id"), nullable=True
+        PgUUID(as_uuid=True),
+        ForeignKey(
+            "candidate_plans.id",
+            name="fk_trade_plans_candidate_plan_id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
     )
     exchange: Mapped[str] = mapped_column(String(32), nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
