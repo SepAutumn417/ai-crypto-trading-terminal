@@ -27,11 +27,11 @@ def _intent_out(intent: OrderIntent, logs: list[ExecutionLog] | None = None) -> 
 
 
 async def _intent_logs(db: AsyncSession, intent_id: UUID) -> list[ExecutionLog]:
-    return (await db.execute(
+    return list((await db.execute(
         select(ExecutionLog)
         .where(ExecutionLog.order_intent_id == intent_id)
         .order_by(ExecutionLog.created_at)
-    )).scalars().all()
+    )).scalars().all())
 
 
 async def get_intent(db: AsyncSession, intent_id: UUID) -> dict:
